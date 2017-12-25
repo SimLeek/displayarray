@@ -79,11 +79,11 @@ def init_cv_cam_pub_handler(camId, # type: Union[int, str]
                             frameHandler # type: Callable[[int, np.ndarray], Any]
                       ):
     # type: (...) -> threading.Thread
-    t = threading.Thread(target=pub_cv_cam_thread, args = (camId, frameHandler))
+    t = threading.Thread(target=cv_cam_pub_handler, args = (camId, frameHandler))
     t.start()
     return t
 
-if __name__ == '__main__':
+if __name__ == '__main__': # todo: add to tests
     i = 0
     def testFrameHandler(frame, camId):
         global i
