@@ -8,7 +8,8 @@ frameDict={}
 
 def cv_win_sub(*,
                names,  # type: List[str]
-               inputVidGlobalNames  # type: List[str]
+               inputVidGlobalNames,  # type: List[str]
+               callbacks=(None,)
                ):
     global cvWindows
     for name in names:
@@ -20,7 +21,11 @@ def cv_win_sub(*,
         #global camImg
         for i in range(len(inputVidGlobalNames)):
             if inputVidGlobalNames[i] in frameDict and frameDict[inputVidGlobalNames[i]] is not None:
-                cv2.imshow(names[i%len(names)], frameDict[inputVidGlobalNames[i]])
+                if callbacks[i%len(callbacks)] is not None:
+                    frame = callbacks[i%len(callbacks)](frameDict[inputVidGlobalNames[i]])
+                else:
+                    frame = frameDict[inputVidGlobalNames[i]]
+                cv2.imshow(names[i%len(names)], frame)
             if cv2.waitKey(1)& 0xFF==ord('q'):
                 for name in names:
                     cv2.destroyWindow(name)
