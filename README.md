@@ -1,0 +1,1 @@
+A simple pub-sub threaded cv webcam opener
