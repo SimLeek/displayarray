@@ -24,6 +24,8 @@ def pub_cv_cam_thread(camId # type: Union[int, str]
     sub = pubsub.subscribe("cvcams."+str(camId)+".cmd")
     msg = ''
     cam = cv2.VideoCapture(camId)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     if not cam.isOpened():
         pubsub.publish("cvcams." + str(camId) + ".status", "failed")
         return False
