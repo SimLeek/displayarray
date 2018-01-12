@@ -19,13 +19,14 @@ def get_open_cv_cam_ids():  # type: () -> List[cv2.VideoCapture]
 
     return cam_list
 
-def pub_cv_cam_thread(camId # type: Union[int, str]
+def pub_cv_cam_thread(camId,  # type: Union[int, str]
+                      requestSize=(1280, 720)  # type: Tuple[int, int]
                       ):
     sub = pubsub.subscribe("cvcams."+str(camId)+".cmd")
     msg = ''
     cam = cv2.VideoCapture(camId)
-    cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cam.set(cv2.CAP_PROP_FRAME_WIDTH, requestSize[0])
+    cam.set(cv2.CAP_PROP_FRAME_HEIGHT, requestSize[1])
     if not cam.isOpened():
         pubsub.publish("cvcams." + str(camId) + ".status", "failed")
         return False
@@ -54,17 +55,19 @@ def listenFixed(sub, block=True, timeout=None, empty=None):
     return msg
 
 
-def init_cv_cam_pub_thread(camId # type: Union[int, str]
+def init_cv_cam_pub_thread(camId, # type: Union[int, str]
+                           requestSize=(1280, 720)  # type: Tuple[int, int]
                       ):
     # type: (...) -> threading.Thread
-    t = threading.Thread(target=pub_cv_cam_thread, args = (camId,))
+    t = threading.Thread(target=pub_cv_cam_thread, args = (camId,requestSize))
     t.start()
     return t
 
 def cv_cam_pub_handler(camId, # type: Union[int, str]
-                       frameHandler # type: Callable[[int, np.ndarray], Any]
+                       frameHandler, # type: Callable[[int, np.ndarray], Any]
+                       requestSize=(1280, 720)  # type: Tuple[int, int]
                        ):
-    t = init_cv_cam_pub_thread(camId)
+    t = init_cv_cam_pub_thread(camId, requestSize)
     subCam = pubsub.subscribe("cvcams."+str(camId)+".vid")
     subOwner = pubsub.subscribe("cvcamhandlers."+str(camId)+".cmd")
     msgOwner = ''
@@ -78,10 +81,11 @@ def cv_cam_pub_handler(camId, # type: Union[int, str]
     t.join()
 
 def init_cv_cam_pub_handler(camId, # type: Union[int, str]
-                            frameHandler # type: Callable[[int, np.ndarray], Any]
+                            frameHandler, # type: Callable[[int, np.ndarray], Any]
+                            requestSize=(1280, 720)  # type: Tuple[int, int]
                       ):
     # type: (...) -> threading.Thread
-    t = threading.Thread(target=cv_cam_pub_handler, args = (camId, frameHandler))
+    t = threading.Thread(target=cv_cam_pub_handler, args = (camId, frameHandler, requestSize))
     t.start()
     return t
 
