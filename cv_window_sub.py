@@ -5,30 +5,41 @@ if False:
 
 cvWindows = []
 frameDict={}
-
+import time
 def cv_win_sub(*,
                names,  # type: List[str]
                inputVidGlobalNames,  # type: List[str]
                callbacks=(None,)
                ):
     global cvWindows
-    for name in names:
-        cvWindows.append(name)
-        cv2.namedWindow(name)
 
     global frameDict
+    firstRun=True
+    timeMod = None
     while True:
+        t = int(time.time()) * 1000
+        if firstRun:
+            timeMod = t % 1000
+            firstRun = False
         #global camImg
         for i in range(len(inputVidGlobalNames)):
             if inputVidGlobalNames[i] in frameDict and frameDict[inputVidGlobalNames[i]] is not None:
                 if callbacks[i%len(callbacks)] is not None:
-                    frame = callbacks[i%len(callbacks)](frameDict[inputVidGlobalNames[i]])
+                    frames = callbacks[i%len(callbacks)](frameDict[inputVidGlobalNames[i]])
                 else:
-                    frame = frameDict[inputVidGlobalNames[i]]
-                cv2.imshow(names[i%len(names)], frame)
+                    frames = frameDict[inputVidGlobalNames[i]]
+                for i in range(len(frames)):
+                    if t % 1000 == timeMod:
+                        if names[i%len(names)]+str(i) not in cvWindows:
+                            cvWindows.append(names[i%len(names)]+str(i))
+                            cv2.namedWindow(names[i%len(names)]+str(i))
+                    cv2.imshow(names[i%len(names)]+str(i), frames[i])
             if cv2.waitKey(1)& 0xFF==ord('q'):
-                for name in names:
+                for name in cvWindows:
                     cv2.destroyWindow(name)
+                for n in names:
+                    pubsub.publish("cvcamhandlers." + str(n) + ".cmd", "q")
+
                 return
 
 

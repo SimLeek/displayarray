@@ -18,6 +18,7 @@ def get_open_cv_cam_ids():  # type: () -> List[cv2.VideoCapture]
         cam_list.append(len(cam_list))
 
     return cam_list
+import time
 
 def pub_cv_cam_thread(camId,  # type: Union[int, str]
                       requestSize=(1280, 720)  # type: Tuple[int, int]
@@ -30,7 +31,10 @@ def pub_cv_cam_thread(camId,  # type: Union[int, str]
     if not cam.isOpened():
         pubsub.publish("cvcams." + str(camId) + ".status", "failed")
         return False
+    now = time.time()
     while (  msg != 'q'):
+        time.sleep(1./(60-(time.time()-now)))
+        now = time.time()
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
         if ret is False or not isinstance(frame, np.ndarray):
             cam.release()
@@ -77,7 +81,7 @@ def cv_cam_pub_handler(camId, # type: Union[int, str]
             frame = frame[0]
             frameHandler(frame, camId)
         msgOwner = listenFixed(subOwner, block=False, empty='')
-    pubsub.publish("cvcams.0.cmd", 'q')
+    pubsub.publish("cvcams."+str(camId)+".cmd", 'q')
     t.join()
 
 def init_cv_cam_pub_handler(camId, # type: Union[int, str]
