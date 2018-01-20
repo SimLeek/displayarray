@@ -8,15 +8,16 @@ cvWindows = []
 frameDict = {}
 
 
+# todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
 def sub_win_loop(*,
                  names,  # type: List[str]
                  input_vid_global_names,  # type: List[str]
-                 callbacks=(None,)
+                 callbacks=(None,),
+                 input_cams=(0,)
                  ):
     global cvWindows
     global frameDict
 
-    first_run = True
     while True:
         for i in range(len(input_vid_global_names)):
             if input_vid_global_names[i] in frameDict and frameDict[input_vid_global_names[i]] is not None:
@@ -25,16 +26,10 @@ def sub_win_loop(*,
                 else:
                     frames = frameDict[input_vid_global_names[i]]
                 for f in range(len(frames)):
-                    if first_run:
-                        if names[f % len(names)] not in cvWindows:
-                            cvWindows.append(names[f % len(names)])
-                            cv2.namedWindow(names[f % len(names)])
                     cv2.imshow(names[f % len(names)], frames[f])
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                for name in cvWindows:
+                for name in names:
                     cv2.destroyWindow(name)
-                for n in names:
-                    cam_ctrl.stop_cam(n)
-
+                for c in input_cams:
+                    cam_ctrl.stop_cam(c)
                 return
-        first_run = False

@@ -44,10 +44,11 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     return True
 
 def pub_cam_thread(cam_id,                  # type: Union[int, str]
-                           request_ize=(1280, 720)  # type: Tuple[int, int]
+                           request_ize=(1280, 720),  # type: Tuple[int, int]
+                   fps_limit = 60
                            ):
     # type: (...) -> threading.Thread
-    t = threading.Thread(target=pub_cam_loop, args=(cam_id, request_ize))
+    t = threading.Thread(target=pub_cam_loop, args=(cam_id, request_ize, fps_limit))
     t.start()
     return t
 

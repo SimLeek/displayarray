@@ -9,9 +9,10 @@ if False:
 
 def frame_handler_loop(cam_id,  # type: Union[int, str]
                        frame_handler,  # type: Callable[[int, np.ndarray], Any]
-                       request_size=(1280, 720)  # type: Tuple[int, int]
+                       request_size=(1280, 720),  # type: Tuple[int, int]
+                       fps_limit = 60
                        ):
-    t = pub_cam_thread(cam_id, request_size)
+    t = pub_cam_thread(cam_id, request_size, fps_limit)
     sub_cam = pubsub.subscribe("cvcams." + str(cam_id) + ".vid")
     sub_owner = pubsub.subscribe("cvcamhandlers." + str(cam_id) + ".cmd")
     msg_owner = ''
@@ -26,8 +27,9 @@ def frame_handler_loop(cam_id,  # type: Union[int, str]
 
 def frame_handler_thread(cam_id,  # type: Union[int, str]
                             frame_handler,  # type: Callable[[int, np.ndarray], Any]
-                            request_size=(1280, 720)  # type: Tuple[int, int]
+                            request_size=(1280, 720),  # type: Tuple[int, int]
+                         fps_limit = 60
                          ):                        # type: (...) -> threading.Thread
-    t = threading.Thread(target=frame_handler_loop, args=(cam_id, frame_handler, request_size))
+    t = threading.Thread(target=frame_handler_loop, args=(cam_id, frame_handler, request_size, fps_limit))
     t.start()
     return t
