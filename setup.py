@@ -8,6 +8,6 @@ setup(
     author='Josh Miklos',
     author_email='Simulator.Leek@gmail.com',
     url='https://github.com/SimLeek/cv_pubsubs',
-    download_url='*',
+    download_url='https://github.com/SimLeek/cv_pubsubs/archive/0.1.tar.gz',
     keywords=['OpenCV', 'PubSub']
 )
