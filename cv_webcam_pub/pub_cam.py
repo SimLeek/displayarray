@@ -22,15 +22,20 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     sub = pubsub.subscribe("cvcams." + str(cam_id) + ".cmd")
     msg = ''
     cam = cv2.VideoCapture(cam_id)
+    #cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+
+    cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, request_size[0])
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
+
+    #cam.set(cv2.CAP_PROP_FPS, fps_limit) Breaks FPS with Windows. WTF guys...
     if not cam.isOpened():
         pubsub.publish("cvcams." + str(cam_id) + ".status", "failed")
         return False
-    now = time.time()
+    #now = time.time()
     while msg != 'q':
-        time.sleep(1. / (fps_limit - (time.time() - now)))
-        now = time.time()
+        #time.sleep(1. / (fps_limit - (time.time() - now)))
+        #now = time.time()
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
         if ret is False or not isinstance(frame, np.ndarray):
             cam.release()
