@@ -14,5 +14,3 @@ def get_cam_ids():  # type: () -> List[int]
         cam_list.append(len(cam_list))
 
     return cam_list
-
-

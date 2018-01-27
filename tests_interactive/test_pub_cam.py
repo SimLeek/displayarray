@@ -9,9 +9,12 @@ class TestFrameHandler(ut.TestCase):
 
         def test_frame_handler(frame, cam_id):
             if self.i == 200:
-                w.cam_ctrl.stop_cam(cam_id)
+                w.CamCtrl.stop_cam(cam_id)
             if self.i % 100 == 0:
                 print(frame.shape)
             self.i += 1
 
-        w.frame_handler_thread(0, test_frame_handler)
+        w.frame_handler_thread(0, test_frame_handler,
+                               request_size=(1280, 720),
+                               high_speed=True,
+                               fps_limit=240)

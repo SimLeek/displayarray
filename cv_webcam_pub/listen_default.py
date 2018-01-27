@@ -1,11 +1,12 @@
 if False:
     from typing import Any, Optional, queue
 
-def _listen_default(sub,           # type: queue
-                    block=True,    # type: bool
-                    timeout=None,  # type: Optional[float]
-                    empty=None     # type: Any
-                    ):             # type: (...)->Any
+
+def listen_default(sub,  # type: queue
+                   block=True,  # type: bool
+                   timeout=None,  # type: Optional[float]
+                   empty=None  # type: Any
+                   ):  # type: (...)->Any
     try:
         msg = (sub.listen(block=block, timeout=timeout))
         try:

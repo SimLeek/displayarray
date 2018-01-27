@@ -1,1 +1,1 @@
-A simple pub-sub threaded cv webcam opener
+A  threaded PubSub OpenCV interface. Webcam and video feeds to multiple windows is supported.
