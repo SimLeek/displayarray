@@ -1,6 +1,6 @@
 import unittest as ut
-import cv_pubsubs.cv_webcam_pub as w
-from cv_pubsubs.cv_window_sub import frame_dict, sub_win_loop
+import cv_pubsubs.webcam_pub as w
+from cv_pubsubs.window_sub import frame_dict, sub_win_loop
 
 
 class TestSubWin(ut.TestCase):
