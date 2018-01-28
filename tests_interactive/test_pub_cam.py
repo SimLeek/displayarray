@@ -1,4 +1,4 @@
-import cv_pubsubs.cv_webcam_pub as w
+import cv_pubsubs.webcam_pub as w
 import unittest as ut
 
 

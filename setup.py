@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name= 'cv_pubsubs',
-    packages = ['cv_webcam_pub', 'cv_window_sub'],
+    packages = ['cv_pubsubs', 'cv_pubsubs.webcam_pub', 'cv_pubsubs.window_sub'],
     version='0.1',
     description='Pubsub interface for Python OpenCV',
     author='Josh Miklos',

@@ -1,5 +1,5 @@
 import cv2
-from ..cv_webcam_pub.camctrl import CamCtrl
+from ..webcam_pub.camctrl import CamCtrl
 
 if False:
     from typing import List
