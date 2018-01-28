@@ -1,10 +1,9 @@
 import cv2
-from .cv_webcam_pub.camctrl import CamCtrl
+from ..cv_webcam_pub.camctrl import CamCtrl
 
 if False:
     from typing import List
 
-cvWindows = []
 frame_dict = {}
 
 
@@ -15,7 +14,6 @@ def sub_win_loop(*,
                  callbacks=(None,),
                  input_cams=(0,)
                  ):
-    global cvWindows
     global frame_dict
 
     while True:
