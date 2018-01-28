@@ -6,8 +6,15 @@ setup(
     version='0.1',
     description='Pubsub interface for Python OpenCV',
     author='Josh Miklos',
-    author_email='Simulator.Leek@gmail.com',
+    author_email='simulatorleek@gmail.com',
     url='https://github.com/SimLeek/cv_pubsubs',
     download_url='https://github.com/SimLeek/cv_pubsubs/archive/0.1.tar.gz',
-    keywords=['OpenCV', 'PubSub']
+    keywords=['OpenCV', 'PubSub'],
+    license='MIT',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+    ]
 )

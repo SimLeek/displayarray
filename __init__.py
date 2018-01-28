@@ -1,2 +1,2 @@
-from .cv_webcam_pub import *
-from .cv_window_sub import sub_win_loop, frame_dict
+# redirection, so we can use subtree like pip
+from .cv_pubsubs import cv_webcam_pub, cv_window_sub
