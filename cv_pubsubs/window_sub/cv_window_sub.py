@@ -8,7 +8,7 @@ frame_dict = {}
 
 
 # todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
-def sub_win_loop(*,
+def sub_win_loop(
                  names,  # type: List[str]
                  input_vid_global_names,  # type: List[str]
                  callbacks=(None,),
@@ -31,3 +31,4 @@ def sub_win_loop(*,
                 for c in input_cams:
                     CamCtrl.stop_cam(c)
                 return
+

@@ -29,6 +29,7 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     msg = ''
     cam = cv2.VideoCapture(cam_id)
     # cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)
+    frame_counter = 0
 
     if high_speed:
         cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
@@ -48,10 +49,14 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
             cam.release()
             pubsub.publish("cvcams." + str(cam_id) + ".status", "failed")
             return False
+        if cam.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
+            frame_counter+=1
+            if frame_counter >= cam.get(cv2.CAP_PROP_FRAME_COUNT):
+                frame_counter = 0
+                cam = cv2.VideoCapture(cam_id)
         pubsub.publish("cvcams." + str(cam_id) + ".vid", (frame,))
         msg = listen_default(sub, block=False, empty='')
 
-        pass
     cam.release()
     return True
 

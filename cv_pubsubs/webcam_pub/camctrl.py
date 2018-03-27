@@ -9,3 +9,8 @@ class CamCtrl:
     def stop_cam(cam_id  # type: Union[int, str]
                  ):
         pubsub.publish("cvcamhandlers." + str(cam_id) + ".cmd", 'q')
+
+    @staticmethod
+    def reset_vid(cam_id  # type: Union[int, str]
+                 ):
+        pubsub.publish("cvcamhandlers." + str(cam_id) + ".cmd", 'r')
