@@ -24,7 +24,7 @@ def sub_win_loop(
                 else:
                     frames = frame_dict[input_vid_global_names[i]]
                 for f in range(len(frames)):
-                    cv2.imshow(names[f % len(names)], frames[f])
+                    cv2.imshow(names[f % len(names)]+" (press q to quit)", frames[f])
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 for name in names:
