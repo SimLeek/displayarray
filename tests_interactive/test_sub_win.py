@@ -2,6 +2,15 @@ import unittest as ut
 import cv_pubsubs.webcam_pub as w
 from cv_pubsubs.window_sub import frame_dict, sub_win_loop
 
+def subscribe_to_key_command(cam_id,  # type: Union[int, str]
+                         frame_handler,  # type: Callable[[int, np.ndarray], Any]
+                         request_size=(1280, 720),  # type: Tuple[int, int]
+                         high_speed=False,  # type: bool
+                         fps_limit=240  # type: float
+                         ):  # type: (...) -> threading.Thread
+    t = threading.Thread(target=frame_handler_loop, args=(cam_id, frame_handler, request_size, high_speed, fps_limit))
+    t.start()
+    return t
 
 class TestSubWin(ut.TestCase):
 
