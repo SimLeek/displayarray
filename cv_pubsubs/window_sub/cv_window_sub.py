@@ -1,64 +1,66 @@
-import cv2
-from ..webcam_pub.camctrl import CamCtrl
+import warnings
 
+import cv2
+import pubsub
+
+from .winctrl import WinCtrl
+from ..listen_default import listen_default
+from ..webcam_pub.camctrl import CamCtrl
 
 if False:
     from typing import List
 
-frame_dict = {}
 
-def triangle_seen():
-    print("a triangle was seen")
-def square_seen():
-    print("a square was seen")
-def nothing_seen():
-    print("nothing was seen")
+class SubscriberWindows(object):
+    frame_dict = {}
 
-command_dict = {
-    "t": triangle_seen,
-    "s": square_seen,
-    " ": nothing_seen
-}
+    esc_key_codes = [27]  # ESC key on most keyboards
 
-# todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
-def sub_win_loop(
-                 names,  # type: List[str]
+    def __init__(self,
+                 window_names,  # type: List[str]
                  input_vid_global_names,  # type: List[str]
                  callbacks=(None,),
                  input_cams=(0,)
                  ):
-    global frame_dict
+        self.window_names = window_names
+        self.input_vid_global_names = input_vid_global_names
+        self.callbacks = callbacks
+        self.input_cams = input_cams
 
-    while True:
-        for i in range(len(input_vid_global_names)):
-            if input_vid_global_names[i] in frame_dict and frame_dict[input_vid_global_names[i]] is not None:
-                if callbacks[i % len(callbacks)] is not None:
-                    frames = callbacks[i % len(callbacks)](frame_dict[input_vid_global_names[i]])
+    def handle_keys(self,
+                    key_input,  # type: int
+                    ):
+        if key_input in self.esc_key_codes:
+            for name in self.window_names:
+                cv2.destroyWindow(name + " (press ESC to quit)")
+            for c in self.input_cams:
+                CamCtrl.stop_cam(c)
+            WinCtrl.quit()
+        elif key_input not in [-1, 0]:
+            try:
+                WinCtrl.key_stroke(chr(key_input))
+            except ValueError:
+                warnings.warn(
+                    RuntimeWarning("Unknown key code: [{}]. Please report to cv_pubsubs issue page.".format(key_input))
+                )
+
+    def update_window_frames(self):
+        for i in range(len(self.input_vid_global_names)):
+            if self.input_vid_global_names[i] in self.frame_dict and self.frame_dict[
+                self.input_vid_global_names[i]] is not None:
+                if self.callbacks[i % len(self.callbacks)] is not None:
+                    frames = self.callbacks[i % len(self.callbacks)](self.frame_dict[self.input_vid_global_names[i]])
                 else:
-                    frames = frame_dict[input_vid_global_names[i]]
+                    frames = self.frame_dict[self.input_vid_global_names[i]]
                 for f in range(len(frames)):
-                    cv2.imshow(names[f % len(names)]+" (press q to quit)", frames[f])
-                    if cv2.getWindowProperty(names[f % len(names)]+" (press q to quit)", 0) != 0:
-                        print("X was pressed")
-                        for name in names:
-                            cv2.destroyWindow(name)
-                        for c in input_cams:
-                            CamCtrl.stop_cam(c)
+                    cv2.imshow(self.window_names[f % len(self.window_names)] + " (press ESC to quit)", frames[f])
 
-
-            key_criteria = cv2.waitKey(1) & 0xFF
-
-            if key_criteria == ord("q"):
-                for name in names:
-                    cv2.destroyWindow(name)
-                for c in input_cams:
-                    CamCtrl.stop_cam(c)
-                return
-
-            if chr(key_criteria) in command_dict:
-                command_dict[chr(key_criteria)]()
-                CamCtrl.key_stroke(chr(key_criteria))
-            elif chr(key_criteria) != "ÿ":
-                print(chr(key_criteria))
-
-
+    # todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
+    def loop(self):
+        sub_cmd = pubsub.subscribe("CVWinCmd")
+        msg_cmd = ''
+        while msg_cmd != 'quit':
+            self.update_window_frames()
+            self.handle_keys(cv2.waitKey(1))
+            msg_cmd = listen_default(sub_cmd, block=False, empty='')
+        pubsub.publish("CVWinCmd", 'quit')

@@ -1,7 +1,9 @@
-import pubsub
-import numpy as np
 import threading
-from .listen_default import listen_default
+
+import numpy as np
+import pubsub
+
+from cv_pubsubs.listen_default import listen_default
 from .pub_cam import pub_cam_thread
 
 if False:
@@ -15,16 +17,16 @@ def frame_handler_loop(cam_id,  # type: Union[int, str]
                        fps_limit=240  # type: float
                        ):
     t = pub_cam_thread(cam_id, request_size, high_speed, fps_limit)
-    sub_cam = pubsub.subscribe("cvcams." + str(cam_id) + ".vid")
-    sub_owner = pubsub.subscribe("cvcamhandlers." + str(cam_id) + ".cmd")
+    sub_cam = pubsub.subscribe("CVCams." + str(cam_id) + ".Vid")
+    sub_owner = pubsub.subscribe("CVCamHandlers." + str(cam_id) + ".Cmd")
     msg_owner = ''
-    while msg_owner != 'q':
+    while msg_owner != 'quit':
         frame = listen_default(sub_cam, timeout=.1)  # type: np.ndarray
         if frame is not None:
             frame = frame[0]
             frame_handler(frame, cam_id)
         msg_owner = listen_default(sub_owner, block=False, empty='')
-    pubsub.publish("cvcams." + str(cam_id) + ".cmd", 'q')
+    pubsub.publish("CVCams." + str(cam_id) + ".Cmd", 'quit')
     t.join()
 
 

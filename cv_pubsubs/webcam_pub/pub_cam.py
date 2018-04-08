@@ -1,9 +1,11 @@
-import pubsub
+import threading
+import time
+
 import cv2
 import numpy as np
-import time
-import threading
-from .listen_default import listen_default
+import pubsub
+
+from cv_pubsubs.listen_default import listen_default
 
 if False:
     from typing import Union, Tuple
@@ -14,9 +16,9 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
                  high_speed=False,  # type: bool
                  fps_limit=240  # type: float
                  ):  # type: (...)->bool
-    """Publishes whichever camera you select to cvcams.<cam_id>.vid
-    You can send a quit command 'q' to cvcams.<cam_id>.cmd
-    Status information, such as failure to open, will be posted to cvcams.<cam_id>.status
+    """Publishes whichever camera you select to CVCams.<cam_id>.Vid
+    You can send a quit command 'quit' to CVCams.<cam_id>.Cmd
+    Status information, such as failure to open, will be posted to CVCams.<cam_id>.Status
 
 
     :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
@@ -25,7 +27,7 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     :param request_size: A tuple with width, then height, to request the video size.
     :return: True if loop ended normally, False if it failed somehow.
     """
-    sub = pubsub.subscribe("cvcams." + str(cam_id) + ".cmd")
+    sub = pubsub.subscribe("CVCams." + str(cam_id) + ".Cmd")
     msg = ''
     cam = cv2.VideoCapture(cam_id)
     # cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)
@@ -38,23 +40,23 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
 
     if not cam.isOpened():
-        pubsub.publish("cvcams." + str(cam_id) + ".status", "failed")
+        pubsub.publish("CVCams." + str(cam_id) + ".Status", "failed")
         return False
     now = time.time()
-    while msg != 'q':
+    while msg != 'quit':
         time.sleep(1. / (fps_limit - (time.time() - now)))
         now = time.time()
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
         if ret is False or not isinstance(frame, np.ndarray):
             cam.release()
-            pubsub.publish("cvcams." + str(cam_id) + ".status", "failed")
+            pubsub.publish("CVCams." + str(cam_id) + ".Status", "failed")
             return False
         if cam.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
-            frame_counter+=1
+            frame_counter += 1
             if frame_counter >= cam.get(cv2.CAP_PROP_FRAME_COUNT):
                 frame_counter = 0
                 cam = cv2.VideoCapture(cam_id)
-        pubsub.publish("cvcams." + str(cam_id) + ".vid", (frame,))
+        pubsub.publish("CVCams." + str(cam_id) + ".Vid", (frame,))
         msg = listen_default(sub, block=False, empty='')
 
     cam.release()

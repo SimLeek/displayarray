@@ -1,9 +1,10 @@
 from distutils.core import setup
+from setuptools import find_packages
 
 setup(
     name= 'cv_pubsubs',
-    packages = ['cv_pubsubs', 'cv_pubsubs.webcam_pub', 'cv_pubsubs.window_sub'],
-    version='0.1',
+    version='1.0.0',
+    packages = find_packages(),
     description='Pubsub interface for Python OpenCV',
     author='Josh Miklos',
     author_email='simulatorleek@gmail.com',
@@ -16,5 +17,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
     ]
 )
