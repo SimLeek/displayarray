@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import pubsub
 
-from cv_pubsubs.listen_default import listen_default
+from cvpubsubs.listen_default import listen_default
 
 if False:
     from typing import Union, Tuple

@@ -3,9 +3,9 @@ import unittest as ut
 
 import pubsub
 
-import cv_pubsubs.webcam_pub as w
-from cv_pubsubs.listen_default import listen_default
-from cv_pubsubs.window_sub import SubscriberWindows
+import cvpubsubs.webcam_pub as w
+from cvpubsubs.listen_default import listen_default
+from cvpubsubs.window_sub import SubscriberWindows
 
 
 def print_keys_thread():

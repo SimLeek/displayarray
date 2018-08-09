@@ -3,7 +3,7 @@ import threading
 import numpy as np
 import pubsub
 
-from cv_pubsubs.listen_default import listen_default
+from cvpubsubs.listen_default import listen_default
 from .pub_cam import pub_cam_thread
 
 if False:
