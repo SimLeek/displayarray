@@ -1,0 +1,6 @@
+include README.md
+include README.rst
+include README.txt
+include LICENSE-APACHE
+include LICENSE-MIT
+include LICENSE.md
