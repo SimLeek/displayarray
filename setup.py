@@ -25,7 +25,7 @@ setup(
     author_email='josh.miklos@gmail.com',
     maintainer='SimLeek',
     maintainer_email='josh.miklos@gmail.com',
-    url='https://github.com/_/CVPubSubs',
+    url='https://github.com/SimLeek/CV_PubSubs',
     license='MIT/Apache-2.0',
 
     keywords=[
