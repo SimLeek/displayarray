@@ -20,6 +20,7 @@ setup(
     version=version,
     description='',
     long_description=readme,
+    long_description_content_type='text/markdown',
     author='SimLeek',
     author_email='josh.miklos@gmail.com',
     maintainer='SimLeek',
