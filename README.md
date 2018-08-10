@@ -1,10 +1,8 @@
-CVPubSubs
-=========
+#CVPubSubs
 
 A  threaded PubSub OpenCV interfaceREADME.md. Webcam and video feeds to multiple windows is supported.
 
-Installation
-------------
+##Installation
 
 CVPubSubs is distributed on `PyPI <https://pypi.org>`_ as a universal
 wheel and is available on Linux/macOS and Windows and supports
@@ -12,8 +10,7 @@ Python 2.7/3.5+ and PyPy.
 
     $ pip install CVPubSubs
     
-Usage
------------
+##Usage
 
 ###Video Editing and Publishing
 
@@ -82,8 +79,7 @@ Usage
     t1.join()
     t1.join()
 
-License
--------
+##License
 
 CVPubSubs is distributed under the terms of both
 
