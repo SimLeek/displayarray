@@ -7,6 +7,9 @@ import cvpubsubs.webcam_pub as w
 from cvpubsubs.listen_default import listen_default
 from cvpubsubs.window_sub import SubscriberWindows
 
+if False:
+    import numpy as np
+
 
 def print_keys_thread():
     sub_key = pubsub.subscribe("CVKeyStroke")
@@ -29,40 +32,54 @@ def start_print_keys_thread():  # type: (...) -> threading.Thread
 class TestSubWin(ut.TestCase):
 
     def test_sub(self):
-        def cam_handler(frame, cam_id):
-            SubscriberWindows.frame_dict[str(cam_id) + "Frame"] = (frame, frame)
+        w.VideoHandlerThread().display()
 
-        t = w.frame_handler_thread(0, cam_handler,
-                                   request_size=(1280, 720),
-                                   high_speed=True,
-                                   fps_limit=240
-                                   )
+    def test_sub_with_args(self):
+        video_thread = w.VideoHandlerThread(video_source=0,
+                                            callbacks=w.display_callbacks,
+                                            request_size=(800, 600),
+                                            high_speed=False,
+                                            fps_limit=8
+                                            )
+
+        video_thread.display()
+
+    def test_sub_with_callback(self):
+        def redden_frame_print_spam(frame, cam_id):
+            frame[:, :, 0] = 0
+            frame[:, :, 1] = 0
+            print("Spam!")
+
+        w.VideoHandlerThread(callbacks=[redden_frame_print_spam] + w.display_callbacks).display()
+
+    def test_multi_cams_one_source(self):
+        def cam_handler(frame, cam_id):
+            SubscriberWindows.set_global_frame_dict(cam_id, frame, frame)
+
+        t = w.VideoHandlerThread(0, [cam_handler],
+                                 request_size=(1280, 720),
+                                 high_speed=True,
+                                 fps_limit=240
+                                 )
+
+        t.start()
 
         SubscriberWindows(window_names=['cammy', 'cammy2'],
-                          input_vid_global_names=[str(0) + "Frame"]
+                          video_sources=[str(0)]
                           ).loop()
-
-        w.CamCtrl.stop_cam(0)
 
         t.join()
 
-    def test_key_sub(self):
-        def cam_handler(frame, cam_id):
-            SubscriberWindows.frame_dict[str(cam_id) + "Frame"] = (frame, frame)
+    def test_multi_cams_multi_source(self):
+        t1 = w.VideoHandlerThread(0)
+        t2 = w.VideoHandlerThread(1)
 
-        t = w.frame_handler_thread(0, cam_handler,
-                                   request_size=(1280, 720),
-                                   high_speed=True,
-                                   fps_limit=240
-                                   )
-
-        kt = start_print_keys_thread()
+        t1.start()
+        t2.start()
 
         SubscriberWindows(window_names=['cammy', 'cammy2'],
-                          input_vid_global_names=[str(0) + "Frame"]
+                          video_sources=[0,1]
                           ).loop()
 
-        w.CamCtrl.stop_cam(0)
-
-        t.join()
-        kt.join()
+        t1.join()
+        t1.join()
