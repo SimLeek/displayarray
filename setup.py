@@ -29,7 +29,7 @@ setup(
     license='MIT/Apache-2.0',
 
     keywords=[
-        '',
+        'opencv', 'camera',
     ],
 
     classifiers=[
