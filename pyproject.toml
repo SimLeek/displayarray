@@ -5,7 +5,7 @@ description = 'Simple tool for working with multiple streams from OpenCV.'
 author = 'SimLeek'
 author_email = 'josh.miklos@gmail.com'
 license = 'MIT/Apache-2.0'
-url = 'https://github.com/_/CVPubSubs'
+url = 'https://github.com/simleek/CVPubSubs'
 
 [requires]
 python_version = ['2.7', '3.5', '3.6', 'pypy', 'pypy3']

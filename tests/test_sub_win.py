@@ -47,8 +47,7 @@ class TestSubWin(ut.TestCase):
     def test_sub_with_callback(self):
         def redden_frame_print_spam(frame, cam_id):
             frame[:, :, 0] = 0
-            frame[:, :, 1] = 0
-            print("Spam!")
+            frame[:, :, 2] = 0
 
         w.VideoHandlerThread(callbacks=[redden_frame_print_spam] + w.display_callbacks).display()
 
@@ -71,8 +70,8 @@ class TestSubWin(ut.TestCase):
         t.join()
 
     def test_multi_cams_multi_source(self):
-        t1 = w.VideoHandlerThread(0)
-        t2 = w.VideoHandlerThread(1)
+        t1 = w.VideoHandlerThread(0, request_size=(1920,1080))
+        t2 = w.VideoHandlerThread(1, request_size=(1920,1080))
 
         t1.start()
         t2.start()
