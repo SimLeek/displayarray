@@ -1,2 +1,3 @@
 pubsub
-opencv-python
+numpy
+opencv_python
