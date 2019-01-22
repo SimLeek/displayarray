@@ -2,6 +2,7 @@ import warnings
 
 import cv2
 import pubsub
+import numpy as np
 
 from .winctrl import WinCtrl
 from ..listen_default import listen_default
@@ -23,17 +24,33 @@ class SubscriberWindows(object):
                  callbacks=(None,),  # type: List[Callable[[List[np.ndarray]], Any]]
                  ):
         self.window_names = window_names
-        self.input_vid_global_names = [str(name) + "frame" for name in video_sources]
+        self.source_names = []
+        for name in video_sources:
+            if len(str(name))<=1000:
+                self.source_names.append(str(name))
+                self.input_vid_global_names = [str(name) + "frame" for name in video_sources]
+            elif isinstance(name, np.ndarray):
+                self.source_names.append(str(hash(str(name))))
+                self.input_vid_global_names = [str(hash(str(name))) + "frame" for name in video_sources]
+            else:
+                raise ValueError("Input window name too long.")
+
         self.callbacks = callbacks
         self.input_cams = video_sources
 
 
     @staticmethod
     def set_global_frame_dict(name, *args):
-        SubscriberWindows.frame_dict[str(name)+"frame"] = [*args]
+        if len(str(name)) <= 1000:
+            SubscriberWindows.frame_dict[str(name) + "frame"] = [*args]
+        elif isinstance(name, np.ndarray):
+            SubscriberWindows.frame_dict[str(hash(str(name))) + "frame"] = [*args]
+        else:
+            raise ValueError("Input window name too long.")
+
 
     def __stop_all_cams(self):
-        for c in self.input_cams:
+        for c in self.source_names:
             CamCtrl.stop_cam(c)
 
     def handle_keys(self,
@@ -42,8 +59,9 @@ class SubscriberWindows(object):
         if key_input in self.esc_key_codes:
             for name in self.window_names:
                 cv2.destroyWindow(name + " (press ESC to quit)")
-            self.__stop_all_cams()
             WinCtrl.quit()
+            self.__stop_all_cams()
+            return 'quit'
         elif key_input not in [-1, 0]:
             try:
                 WinCtrl.key_stroke(chr(key_input))
@@ -71,7 +89,8 @@ class SubscriberWindows(object):
         msg_cmd = ''
         while msg_cmd != 'quit':
             self.update_window_frames()
-            self.handle_keys(cv2.waitKey(1))
-            msg_cmd = listen_default(sub_cmd, block=False, empty='')
-        pubsub.publish("CVWinCmd", 'quit')
+            msg_cmd = self.handle_keys(cv2.waitKey(1))
+            if not msg_cmd:
+                msg_cmd = listen_default(sub_cmd, block=False, empty='')
+        WinCtrl.quit()
         self.__stop_all_cams()

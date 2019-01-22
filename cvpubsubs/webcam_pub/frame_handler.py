@@ -5,7 +5,7 @@ import pubsub
 
 from cvpubsubs.listen_default import listen_default
 from .pub_cam import pub_cam_thread
-
+from cvpubsubs.webcam_pub.camctrl import CamCtrl
 if False:
     from typing import Union, Tuple, Any, Callable, List
 
@@ -31,7 +31,7 @@ class VideoHandlerThread(threading.Thread):
 
     def __init__(self, video_source=0,  # type: Union[int, str]
                  callbacks=(global_cv_display_callback,),  # type: List[Callable[[np.ndarray, int], Any]]
-                 request_size=(1280, 720),  # type: Tuple[int, int]
+                 request_size=(-1, -1),  # type: Tuple[int, int]
                  high_speed=True,  # type: bool
                  fps_limit=240  # type: float
                  ):
@@ -49,7 +49,14 @@ class VideoHandlerThread(threading.Thread):
         :type fps_limit: float
         """
         super(VideoHandlerThread, self).__init__(target=self.loop, args=())
-        self.cam_id = video_source
+        if isinstance(video_source, (int, str)):
+            self.cam_id = str(video_source)
+        elif isinstance(video_source, np.ndarray):
+            self.cam_id = str(hash(str(video_source)))
+        else:
+            raise TypeError(
+                "Only strings or ints representing cameras, or numpy arrays representing pictures supported.")
+        self.video_source = video_source
         self.callbacks = callbacks
         self.request_size = request_size
         self.high_speed = high_speed
@@ -57,7 +64,7 @@ class VideoHandlerThread(threading.Thread):
 
     def loop(self):
         """Continually gets frames from the video publisher, runs callbacks on them, and listens to commands."""
-        t = pub_cam_thread(self.cam_id, self.request_size, self.high_speed, self.fps_limit)
+        t = pub_cam_thread(self.video_source, self.request_size, self.high_speed, self.fps_limit)
         sub_cam = pubsub.subscribe("CVCams." + str(self.cam_id) + ".Vid")
         sub_owner = pubsub.subscribe("CVCamHandlers." + str(self.cam_id) + ".Cmd")
         msg_owner = ''
@@ -68,7 +75,7 @@ class VideoHandlerThread(threading.Thread):
                 for c in self.callbacks:
                     c(frame, self.cam_id)
             msg_owner = listen_default(sub_owner, block=False, empty='')
-        pubsub.publish("CVCams." + str(self.cam_id) + ".Cmd", 'quit')
+        CamCtrl.stop_cam(self.cam_id)
         t.join()
 
     def display(self,
