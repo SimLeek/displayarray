@@ -1,3 +1,4 @@
+import queue
 if False:
     from typing import Any, Optional, queue
 
