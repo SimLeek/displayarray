@@ -10,3 +10,4 @@ class CamCtrl:
     def stop_cam(cam_id  # type: Union[int, str]
                  ):
         pubsub.publish("CVCamHandlers." + str(cam_id) + ".Cmd", 'quit')
+        pubsub.publish("CVCams." + str(cam_id) + ".Cmd", 'quit')

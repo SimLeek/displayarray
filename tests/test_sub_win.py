@@ -2,6 +2,7 @@ import threading
 import unittest as ut
 
 import pubsub
+import numpy as np
 
 import cvpubsubs.webcam_pub as w
 from cvpubsubs.listen_default import listen_default
@@ -33,6 +34,10 @@ class TestSubWin(ut.TestCase):
 
     def test_sub(self):
         w.VideoHandlerThread().display()
+
+    def test_image(self):
+        img = np.random.uniform(0, 1, (300, 300, 3))
+        w.VideoHandlerThread(video_source=img).display()
 
     def test_sub_with_args(self):
         video_thread = w.VideoHandlerThread(video_source=0,
@@ -70,14 +75,14 @@ class TestSubWin(ut.TestCase):
         t.join()
 
     def test_multi_cams_multi_source(self):
-        t1 = w.VideoHandlerThread(0, request_size=(1920,1080))
-        t2 = w.VideoHandlerThread(1, request_size=(1920,1080))
+        t1 = w.VideoHandlerThread(0, request_size=(1920, 1080))
+        t2 = w.VideoHandlerThread(1, request_size=(1920, 1080))
 
         t1.start()
         t2.start()
 
         SubscriberWindows(window_names=['cammy', 'cammy2'],
-                          video_sources=[0,1]
+                          video_sources=[0, 1]
                           ).loop()
 
         t1.join()
