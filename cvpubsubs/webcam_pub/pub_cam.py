@@ -1,11 +1,10 @@
 import threading
 import time
 
+
 import cv2
 import numpy as np
-import pubsub
 
-from cvpubsubs.listen_default import listen_default
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
 from .np_cam import NpCam
 
@@ -31,17 +30,26 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     """
 
     if isinstance(cam_id, (int, str)):
-        cam = cv2.VideoCapture(cam_id)
         name = str(cam_id)
     elif isinstance(cam_id, np.ndarray):
-        cam = NpCam(cam_id)  # type: NpCam
         name = str(hash(str(cam_id)))
     else:
         raise TypeError("Only strings or ints representing cameras, or numpy arrays representing pictures supported.")
+
+    if isinstance(cam_id, (int, str)):
+        cam = cv2.VideoCapture(cam_id)
+    elif isinstance(cam_id, np.ndarray):
+        cam = NpCam(cam_id)  # type: NpCam
+    else:
+        raise TypeError("Only strings or ints representing cameras, or numpy arrays representing pictures supported.")
+
+    CamCtrl.register_cam(name)
+
     # cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)
     frame_counter = 0
 
-    sub = pubsub.subscribe("CVCams." + str(name) + ".Cmd")
+    sub = CamCtrl.cam_cmd_sub(name)
+    sub.return_on_no_data = ''
     msg = ''
 
     if high_speed:
@@ -51,7 +59,7 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
 
     if not cam.isOpened():
-        pubsub.publish("CVCams." + name + ".Status", "failed")
+        CamCtrl.cv_cams_dict[name].status_pub.publish("failed")
         return False
     now = time.time()
     while msg != 'quit':
@@ -60,15 +68,16 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
         if ret is False or not isinstance(frame, np.ndarray):
             cam.release()
-            pubsub.publish("CVCams." + name + ".Status", "failed")
+            CamCtrl.cv_cams_dict[name].status_pub.publish("failed")
             return False
         if cam.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
             frame_counter += 1
             if frame_counter >= cam.get(cv2.CAP_PROP_FRAME_COUNT):
                 frame_counter = 0
                 cam = cv2.VideoCapture(cam_id)
-        pubsub.publish("CVCams." + name + ".Vid", (frame,))
-        msg = listen_default(sub, block=False, empty='')
+        CamCtrl.cv_cams_dict[name].frame_pub.publish(frame)
+        msg = sub.get()
+    sub.release()
 
     cam.release()
     return True

@@ -1,27 +1,28 @@
 import threading
 import unittest as ut
 
-import pubsub
 import numpy as np
 
 import cvpubsubs.webcam_pub as w
-from cvpubsubs.listen_default import listen_default
 from cvpubsubs.window_sub import SubscriberWindows
+from cvpubsubs.window_sub.winctrl import WinCtrl
 
 if False:
     import numpy as np
 
 
 def print_keys_thread():
-    sub_key = pubsub.subscribe("CVKeyStroke")
-    sub_cmd = pubsub.subscribe("CVWinCmd")
+    sub_key = WinCtrl.key_pub.make_sub()
+    sub_cmd = WinCtrl.win_cmd_pub.make_sub()
+    sub_cmd.return_on_no_data = ''
     msg_cmd = ''
     while msg_cmd != 'quit':
-        key_chr = listen_default(sub_key, timeout=.1)  # type: np.ndarray
+        key_chr = sub_key.get(sub_key)  # type: np.ndarray
+        WinCtrl.key_pub.publish(None) # consume data
         if key_chr is not None:
             print("key pressed: " + str(key_chr))
-        msg_cmd = listen_default(sub_cmd, block=False, empty='')
-    pubsub.publish("CVWinCmd", 'quit')
+        msg_cmd = sub_cmd.get()
+    WinCtrl.quit(force_all_read=False)
 
 
 def start_print_keys_thread():  # type: (...) -> threading.Thread
@@ -74,6 +75,7 @@ class TestSubWin(ut.TestCase):
 
         t.join()
 
+    @ut.skip("I don't have stereo cams... :(")
     def test_multi_cams_multi_source(self):
         t1 = w.VideoHandlerThread(0, request_size=(1920, 1080))
         t2 = w.VideoHandlerThread(1, request_size=(1920, 1080))

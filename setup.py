@@ -13,7 +13,8 @@ with open('cvpubsubs/__init__.py', 'r') as f:
 with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
-REQUIRES = ['pubsub', 'numpy', 'opencv_python']
+with open('requirements.txt', 'r', encoding='utf-8') as f:
+    REQUIRES = f.readlines()
 
 setup(
     name='CVPubSubs',

@@ -1,12 +1,17 @@
-import pubsub
+import threading
+import logging
+
+from localpubsub import VariablePub, VariableSub
 
 
-class WinCtrl:
+class WinCtrl(object):
+    key_pub = VariablePub()
+    win_cmd_pub = VariablePub()
 
     @staticmethod
-    def key_stroke(key_entered):
-        pubsub.publish("CVKeyStroke", key_entered)
+    def quit(force_all_read=True):
+        WinCtrl.win_cmd_pub.publish('quit', force_all_read=force_all_read)
 
     @staticmethod
-    def quit():
-        pubsub.publish("CVWinCmd", "quit")
+    def win_cmd_sub(): # type: ()->VariableSub
+        return WinCtrl.win_cmd_pub.make_sub()  # type: VariableSub

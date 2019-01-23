@@ -1,12 +1,11 @@
 import warnings
 
 import cv2
-import pubsub
 import numpy as np
 
 from .winctrl import WinCtrl
-from ..listen_default import listen_default
 from ..webcam_pub.camctrl import CamCtrl
+from localpubsub import NoData
 
 if False:
     from typing import List, Union, Callable, Any
@@ -26,12 +25,12 @@ class SubscriberWindows(object):
         self.window_names = window_names
         self.source_names = []
         for name in video_sources:
-            if len(str(name))<=1000:
-                self.source_names.append(str(name))
-                self.input_vid_global_names = [str(name) + "frame" for name in video_sources]
-            elif isinstance(name, np.ndarray):
+            if isinstance(name, np.ndarray):
                 self.source_names.append(str(hash(str(name))))
                 self.input_vid_global_names = [str(hash(str(name))) + "frame" for name in video_sources]
+            elif len(str(name))<=1000:
+                self.source_names.append(str(name))
+                self.input_vid_global_names = [str(name) + "frame" for name in video_sources]
             else:
                 raise ValueError("Input window name too long.")
 
@@ -64,7 +63,7 @@ class SubscriberWindows(object):
             return 'quit'
         elif key_input not in [-1, 0]:
             try:
-                WinCtrl.key_stroke(chr(key_input))
+                WinCtrl.key_pub.publish(chr(key_input))
             except ValueError:
                 warnings.warn(
                     RuntimeWarning("Unknown key code: [{}]. Please report to cv_pubsubs issue page.".format(key_input))
@@ -73,24 +72,27 @@ class SubscriberWindows(object):
     def update_window_frames(self):
         win_num = 0
         for i in range(len(self.input_vid_global_names)):
-            if self.input_vid_global_names[i] in self.frame_dict and self.frame_dict[
-                self.input_vid_global_names[i]] is not None:
+            if self.input_vid_global_names[i] in self.frame_dict and not isinstance(self.frame_dict[
+                                                                        self.input_vid_global_names[i]], NoData):
                 if len(self.callbacks)>0 and self.callbacks[i % len(self.callbacks)] is not None:
                     frames = self.callbacks[i % len(self.callbacks)](self.frame_dict[self.input_vid_global_names[i]])
                 else:
                     frames = self.frame_dict[self.input_vid_global_names[i]]
+                if isinstance(frames, np.ndarray) and len(frames.shape)<=3:
+                    frames = [frames]
                 for f in range(len(frames)):
                     cv2.imshow(self.window_names[win_num % len(self.window_names)] + " (press ESC to quit)", frames[f])
                     win_num += 1
 
     # todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
     def loop(self):
-        sub_cmd = pubsub.subscribe("CVWinCmd")
+        sub_cmd = WinCtrl.win_cmd_sub()
         msg_cmd = ''
-        while msg_cmd != 'quit':
+        key = ''
+        while msg_cmd != 'quit' and key != 'quit':
             self.update_window_frames()
-            msg_cmd = self.handle_keys(cv2.waitKey(1))
-            if not msg_cmd:
-                msg_cmd = listen_default(sub_cmd, block=False, empty='')
-        WinCtrl.quit()
+            msg_cmd = sub_cmd.get()
+            key = self.handle_keys(cv2.waitKey(1))
+        sub_cmd.release()
+        WinCtrl.quit(force_all_read=False)
         self.__stop_all_cams()
