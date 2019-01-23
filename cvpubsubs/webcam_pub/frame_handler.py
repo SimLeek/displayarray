@@ -1,9 +1,7 @@
 import threading
 
 import numpy as np
-import pubsub
 
-from cvpubsubs.listen_default import listen_default
 from .pub_cam import pub_cam_thread
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
 if False:
@@ -22,7 +20,7 @@ def global_cv_display_callback(frame,  # type: np.ndarray
     :param cam_id: The video or image source
     :type cam_id: Union[int, str]
     """
-    SubscriberWindows.frame_dict[str(cam_id) + "frame"] = (frame,)
+    SubscriberWindows.frame_dict[str(cam_id) + "frame"] = frame
 
 display_callbacks = [global_cv_display_callback]
 
@@ -65,16 +63,20 @@ class VideoHandlerThread(threading.Thread):
     def loop(self):
         """Continually gets frames from the video publisher, runs callbacks on them, and listens to commands."""
         t = pub_cam_thread(self.video_source, self.request_size, self.high_speed, self.fps_limit)
-        sub_cam = pubsub.subscribe("CVCams." + str(self.cam_id) + ".Vid")
-        sub_owner = pubsub.subscribe("CVCamHandlers." + str(self.cam_id) + ".Cmd")
-        msg_owner = ''
+        while str(self.cam_id) not in CamCtrl.cv_cams_dict:
+            continue
+        sub_cam = CamCtrl.cam_frame_sub(str(self.cam_id))
+        sub_owner = CamCtrl.handler_cmd_sub(str(self.cam_id))
+        msg_owner = sub_owner.return_on_no_data = ''
         while msg_owner != 'quit':
-            frame = listen_default(sub_cam, timeout=.1)  # type: np.ndarray
+            frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
             if frame is not None:
-                frame = frame[0]
+                frame = frame
                 for c in self.callbacks:
-                    c(frame, self.cam_id)
-            msg_owner = listen_default(sub_owner, block=False, empty='')
+                    frame = c(frame, self.cam_id)
+            msg_owner = sub_owner.get()
+        sub_owner.release()
+        sub_cam.release()
         CamCtrl.stop_cam(self.cam_id)
         t.join()
 
