@@ -1,0 +1,23 @@
+language: python
+cache: pip
+
+python:
+- '2.7'
+- '3.5'
+- '3.6'
+
+install:
+- pip install -r requirements.txt
+script:
+- if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then export CIBW_BUILD='cp27*'; fi
+- if [[ $TRAVIS_PYTHON_VERSION == 3.5 ]]; then export CIBW_BUILD='cp35*'; fi
+- if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then export CIBW_BUILD='cp36*'; fi
+- pip install cibuildwheel==0.10.1
+- cibuildwheel --output-dir wheelhouse
+
+deploy:
+  provider: pypi
+  user: SimLeek
+  skip_existing: true
+  password:
+    secure: crD6W+uBJu+d/T4A8K+ZVAhyVQil5GXk1m/N0c5P7qX1DdMrcL1KXGzD5URtuvqTfUop1ah9npmT57yTP39WCRRqTRsra+WGFDZl+dH89xSnApFhWULhD1Z2JXu/54BKYlPU5xILUkqm+4BNwW4ZULXLTPZAA1dHSuSHqhQUsjfx/P7J0veNRgEdHoL2V9k8tvO8JJiGhGNDgyprv0PutzPOtTihd+aSM1f0sA4/vHF7Hbo7Surr7nfEXQeC9husBqYomG4bBS/F1P709y5hQRZVMdqzjQ8eQyQYmkWhW7Wmfq4uTkGTQf7TMzqB8GkxtU82ktSdRsDk6yhejNtG6TwM4O3XFw0saZMHViaKrSq2/rqdrmdrEQVogSaf7Z7CPa7FA3IGMm2G9mVt2xa94DP4gfElrGgG0R1vJZCV9L4ZMM2bg7OsU9XMU++tsOyKm/o+I/AMOxlgy/2m5KSganPswEGSiFWBE7foxLZT6+amXWHjopE43qWstOLGVsyfsQawBfcXOiqPYsOqEXgnvl8uqGfvE/UfocHuZGeQ/y8w0Q5rLfO3bMGaOFHzqBWeYK92pt8VAmDV3TvXHwPuIkG85qThUa4mw2s3Am/U9wdHWj1Ou6ZiFn6iHR9ASB1AFPR/qOLPWYIboSxlZTnKCs5/z+zuFZDTB9YO5hhmAr4=
