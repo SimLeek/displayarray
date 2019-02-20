@@ -14,7 +14,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
     readme = f.read()
 
 REQUIRES = [
-    "opencv_python==3.4.2.17"
+    "opencv_python==4.0.0.21"
     "localpubsub==0.0.1",
     "numpy==1.16.1"
 ]
