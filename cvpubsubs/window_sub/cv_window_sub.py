@@ -28,7 +28,7 @@ class SubscriberWindows(object):
             if isinstance(name, np.ndarray):
                 self.source_names.append(str(hash(str(name))))
                 self.input_vid_global_names = [str(hash(str(name))) + "frame" for name in video_sources]
-            elif len(str(name))<=1000:
+            elif len(str(name)) <= 1000:
                 self.source_names.append(str(name))
                 self.input_vid_global_names = [str(name) + "frame" for name in video_sources]
             else:
@@ -36,7 +36,6 @@ class SubscriberWindows(object):
 
         self.callbacks = callbacks
         self.input_cams = video_sources
-
 
     @staticmethod
     def set_global_frame_dict(name, *args):
@@ -46,7 +45,6 @@ class SubscriberWindows(object):
             SubscriberWindows.frame_dict[str(hash(str(name))) + "frame"] = [*args]
         else:
             raise ValueError("Input window name too long.")
-
 
     def __stop_all_cams(self):
         for c in self.source_names:
@@ -69,20 +67,27 @@ class SubscriberWindows(object):
                     RuntimeWarning("Unknown key code: [{}]. Please report to cv_pubsubs issue page.".format(key_input))
                 )
 
+    def _display_frames(self, frames, win_num):
+        for f in range(len(frames)):
+            if frames[f].dtype.num == 17 or len(frames[f].shape) > 3:  # detect nested
+                self._display_frames(frames[f], win_num)
+            else:
+                cv2.imshow(self.window_names[win_num % len(self.window_names)] + " (press ESC to quit)", frames[f])
+                win_num += 1
+
     def update_window_frames(self):
         win_num = 0
         for i in range(len(self.input_vid_global_names)):
             if self.input_vid_global_names[i] in self.frame_dict and not isinstance(self.frame_dict[
-                                                                        self.input_vid_global_names[i]], NoData):
-                if len(self.callbacks)>0 and self.callbacks[i % len(self.callbacks)] is not None:
+                                                                                        self.input_vid_global_names[i]],
+                                                                                    NoData):
+                if len(self.callbacks) > 0 and self.callbacks[i % len(self.callbacks)] is not None:
                     frames = self.callbacks[i % len(self.callbacks)](self.frame_dict[self.input_vid_global_names[i]])
                 else:
                     frames = self.frame_dict[self.input_vid_global_names[i]]
-                if isinstance(frames, np.ndarray) and len(frames.shape)<=3:
+                if isinstance(frames, np.ndarray) and len(frames.shape) <= 3:
                     frames = [frames]
-                for f in range(len(frames)):
-                    cv2.imshow(self.window_names[win_num % len(self.window_names)] + " (press ESC to quit)", frames[f])
-                    win_num += 1
+                self._display_frames(frames, win_num)
 
     # todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
     def loop(self):
