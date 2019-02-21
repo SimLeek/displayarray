@@ -41,6 +41,16 @@ Python 2.7/3.5+ and PyPy.
 
     w.VideoHandlerThread(callbacks=[redden_frame_print_spam] + w.display_callbacks).display()
 
+#### Display a tensor
+
+    def tensor_from_image(frame, cam_id):
+        ten = tensor_from_pytorch_or_tensorflow(frame)
+        return ten
+    
+    t = wp.VideoHandlerThread(video_source=cam, callbacks=[tensor_from_image] + wp.display_callbacks)
+
+    t.display()
+
 #### Display multiple windows from one source
     import cvpubsubs.webcam_pub as w
     from cvpubsubs.window_sub import SubscriberWindows
