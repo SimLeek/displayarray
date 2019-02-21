@@ -69,25 +69,26 @@ class SubscriberWindows(object):
 
     def _display_frames(self, frames, win_num):
         for f in range(len(frames)):
-            if frames[f].dtype.num == 17 or len(frames[f].shape) > 3:  # detect nested
-                self._display_frames(frames[f], win_num)
+            # detect nested:
+            if isinstance(frames[f], (list, tuple)) or frames[f].dtype.num == 17 or len(frames[f].shape) > 3:
+                win_num = self._display_frames(frames[f], win_num)
             else:
                 cv2.imshow(self.window_names[win_num % len(self.window_names)] + " (press ESC to quit)", frames[f])
                 win_num += 1
+        return win_num
 
     def update_window_frames(self):
         win_num = 0
         for i in range(len(self.input_vid_global_names)):
-            if self.input_vid_global_names[i] in self.frame_dict and not isinstance(self.frame_dict[
-                                                                                        self.input_vid_global_names[i]],
-                                                                                    NoData):
+            if self.input_vid_global_names[i] in self.frame_dict and \
+                    not isinstance(self.frame_dict[self.input_vid_global_names[i]], NoData):
                 if len(self.callbacks) > 0 and self.callbacks[i % len(self.callbacks)] is not None:
                     frames = self.callbacks[i % len(self.callbacks)](self.frame_dict[self.input_vid_global_names[i]])
                 else:
                     frames = self.frame_dict[self.input_vid_global_names[i]]
                 if isinstance(frames, np.ndarray) and len(frames.shape) <= 3:
                     frames = [frames]
-                self._display_frames(frames, win_num)
+                win_num = self._display_frames(frames, win_num)
 
     # todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
     def loop(self):
