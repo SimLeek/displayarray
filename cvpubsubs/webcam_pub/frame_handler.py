@@ -73,7 +73,9 @@ class VideoHandlerThread(threading.Thread):
             if frame is not None:
                 frame = frame
                 for c in self.callbacks:
-                    frame = c(frame, self.cam_id)
+                    frame_c = c(frame, self.cam_id)
+                    if frame_c is not None:
+                        frame = frame_c
             msg_owner = sub_owner.get()
         sub_owner.release()
         sub_cam.release()
