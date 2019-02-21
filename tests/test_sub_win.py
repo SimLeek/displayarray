@@ -18,7 +18,7 @@ def print_keys_thread():
     msg_cmd = ''
     while msg_cmd != 'quit':
         key_chr = sub_key.get(sub_key)  # type: np.ndarray
-        WinCtrl.key_pub.publish(None) # consume data
+        WinCtrl.key_pub.publish(None)  # consume data
         if key_chr is not None:
             print("key pressed: " + str(key_chr))
         msg_cmd = sub_cmd.get()
@@ -92,7 +92,14 @@ class TestSubWin(ut.TestCase):
 
     def test_nested_frames(self):
         def nest_frame(frame, cam_id):
-            frame = np.asarray([[[[[[frame]]]]]])
+            frame = np.asarray([[[[[[frame]]]]], [[[[[frame]]], [[[frame]]]]]])
             return frame
 
-        w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks).display()
+        v = w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks)
+        v.start()
+
+        SubscriberWindows(window_names=[str(i) for i in range(3)],
+                          video_sources=[str(0)]
+                          ).loop()
+
+        v.join()
