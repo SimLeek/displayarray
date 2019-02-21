@@ -89,3 +89,10 @@ class TestSubWin(ut.TestCase):
 
         t1.join()
         t1.join()
+
+    def test_nested_frames(self):
+        def nest_frame(frame, cam_id):
+            frame = np.asarray([[[[[[frame]]]]]])
+            return frame
+
+        w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks).display()
