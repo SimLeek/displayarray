@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from .winctrl import WinCtrl
-from ..webcam_pub.camctrl import CamCtrl
+from cvpubsubs.webcam_pub.camctrl import CamCtrl
 from localpubsub import NoData
 
 if False:

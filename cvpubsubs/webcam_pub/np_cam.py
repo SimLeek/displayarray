@@ -14,6 +14,14 @@ class NpCam(object):
 
         self.__wait_for_ratio = False
 
+    def __handler_ratio(self):
+        if self.__width <= 0 or not isinstance(self.__width, int):
+            self.__width = int(self.__ratio * self.__height)
+        elif self.__height <= 0 or not isinstance(self.__height, int):
+            self.__height = int(self.__width / self.__ratio)
+        if self.__width > 0 and self.__height > 0:
+            self.__img = cv2.resize(self.__img, (self.__width, self.__height))
+
     def set(self, *args, **kwargs):
         if args[0] in [cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT]:
             self.__wait_for_ratio = not self.__wait_for_ratio
@@ -22,21 +30,17 @@ class NpCam(object):
             else:
                 self.__height = args[1]
             if not self.__wait_for_ratio:
-                if self.__width <= 0 or not isinstance(self.__width, int):
-                    self.__width = int(self.__ratio * self.__height)
-                elif self.__height <= 0 or not isinstance(self.__height, int):
-                    self.__height = int(self.__width / self.__ratio)
-                if self.__width>0 and self.__height>0:
-                    self.__img = cv2.resize(self.__img, (self.__width, self.__height))
+                self.__handler_ratio()
 
-    def get(self, *args, **kwargs):
+    @staticmethod
+    def get(*args, **kwargs):
         if args[0] == cv2.CAP_PROP_FRAME_COUNT:
             return float("inf")
 
     def read(self):
         return (True, self.__img)
 
-    def isOpened(self):
+    def isOpened(self):  # NOSONAR
         return self.__is_opened
 
     def release(self):

@@ -88,6 +88,27 @@ Python 2.7/3.5+ and PyPy.
 
     t1.join()
     t1.join()
+    
+#### Run a function on each pixel
+    from cvpubsubs.webcam_pub import VideoHandlerThread
+    from cvpubsubs.webcam_pub.callbacks import function_display_callback
+    img = np.zeros((50, 50, 1))
+    img[0:5, 0:5, :] = 1
+
+    def conway_game_of_life(array, coords, finished):
+        neighbors = np.sum(array[max(coords[0] - 1, 0):min(coords[0] + 2, 50),
+                           max(coords[1] - 1, 0):min(coords[1] + 2, 50)])
+        neighbors = max(neighbors - np.sum(array[coords[0:2]]), 0.0)
+        if array[coords] == 1.0:
+            if neighbors < 2 or neighbors > 3:
+                array[coords] = 0.0
+            elif 2 <= neighbors <= 3:
+                array[coords] = 1.0
+        else:
+            if neighbors == 3:
+                array[coords] = 1.0
+
+    VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway_game_of_life)).display()
 
 ## License
 
