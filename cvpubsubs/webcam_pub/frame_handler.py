@@ -2,33 +2,24 @@ import threading
 
 import numpy as np
 
-from .pub_cam import pub_cam_thread
+from cvpubsubs.webcam_pub.pub_cam import pub_cam_thread
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
+
 if False:
-    from typing import Union, Tuple, Any, Callable, List
+    from typing import Union, Tuple, Any, Callable, List, Optional
 
-from cvpubsubs.window_sub import SubscriberWindows
+    FrameCallable = Callable[[np.ndarray, int], Optional[np.ndarray]]
 
-
-def global_cv_display_callback(frame,  # type: np.ndarray
-                               cam_id  # type: Union[int, str]
-                               ):
-    """Default callback for sending frames to the global frame dictionary.
-
-    :param frame: The video or image frame
-    :type frame: np.ndarray
-    :param cam_id: The video or image source
-    :type cam_id: Union[int, str]
-    """
-    SubscriberWindows.frame_dict[str(cam_id) + "frame"] = frame
+from cvpubsubs.webcam_pub.callbacks import global_cv_display_callback
 
 display_callbacks = [global_cv_display_callback]
+
 
 class VideoHandlerThread(threading.Thread):
     "Thread for publishing frames from a video source."
 
-    def __init__(self, video_source=0,  # type: Union[int, str]
-                 callbacks=(global_cv_display_callback,),  # type: List[Callable[[np.ndarray, int], Any]]
+    def __init__(self, video_source=0,  # type: Union[int, str, np.ndarray]
+                 callbacks=(global_cv_display_callback,),  # type: Union[List[FrameCallable], FrameCallable]
                  request_size=(-1, -1),  # type: Tuple[int, int]
                  high_speed=True,  # type: bool
                  fps_limit=240  # type: float
@@ -55,7 +46,10 @@ class VideoHandlerThread(threading.Thread):
             raise TypeError(
                 "Only strings or ints representing cameras, or numpy arrays representing pictures supported.")
         self.video_source = video_source
-        self.callbacks = callbacks
+        if callable(callbacks):
+            self.callbacks = [callbacks]
+        else:
+            self.callbacks = callbacks
         self.request_size = request_size
         self.high_speed = high_speed
         self.fps_limit = fps_limit
@@ -71,7 +65,6 @@ class VideoHandlerThread(threading.Thread):
         while msg_owner != 'quit':
             frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
             if frame is not None:
-                frame = frame
                 for c in self.callbacks:
                     frame_c = c(frame, self.cam_id)
                     if frame_c is not None:
@@ -85,11 +78,18 @@ class VideoHandlerThread(threading.Thread):
     def display(self,
                 callbacks=()  # type: List[Callable[[List[np.ndarray]], Any]]
                 ):
+        from cvpubsubs.window_sub import SubscriberWindows
+
         """Default display operation. For multiple video sources, please use something outside of this class.
 
         :param callbacks: List of callbacks to be run on frames before displaying to the screen.
         :type callbacks: List[Callable[[List[np.ndarray]], Any]]
         """
+        if global_cv_display_callback not in self.callbacks:
+            if isinstance(self.callbacks, tuple):
+                self.callbacks = self.callbacks + (global_cv_display_callback,)
+            else:
+                self.callbacks.append(global_cv_display_callback)
         self.start()
         SubscriberWindows(video_sources=[self.cam_id], callbacks=callbacks).loop()
         self.join()

@@ -40,6 +40,10 @@ class TestSubWin(ut.TestCase):
         img = np.random.uniform(0, 1, (300, 300, 3))
         w.VideoHandlerThread(video_source=img).display()
 
+    def test_image_args(self):
+        img = np.random.uniform(0, 1, (30, 30, 3))
+        w.VideoHandlerThread(video_source=img, request_size=(300, -1)).display()
+
     def test_sub_with_args(self):
         video_thread = w.VideoHandlerThread(video_source=0,
                                             callbacks=w.display_callbacks,
@@ -55,7 +59,7 @@ class TestSubWin(ut.TestCase):
             frame[:, :, 0] = 0
             frame[:, :, 2] = 0
 
-        w.VideoHandlerThread(callbacks=[redden_frame_print_spam] + w.display_callbacks).display()
+        w.VideoHandlerThread(callbacks=redden_frame_print_spam).display()
 
     def test_multi_cams_one_source(self):
         def cam_handler(frame, cam_id):
@@ -103,3 +107,24 @@ class TestSubWin(ut.TestCase):
                           ).loop()
 
         v.join()
+
+    def test_conway_life(self):
+        from cvpubsubs.webcam_pub import VideoHandlerThread
+        from cvpubsubs.webcam_pub.callbacks import function_display_callback
+        img = np.zeros((50, 50, 1))
+        img[0:5, 0:5, :] = 1
+
+        def conway(array, coords, finished):
+            neighbors = np.sum(array[max(coords[0] - 1, 0):min(coords[0] + 2, 50),
+                               max(coords[1] - 1, 0):min(coords[1] + 2, 50)])
+            neighbors = max(neighbors - np.sum(array[coords[0:2]]), 0.0)
+            if array[coords] == 1.0:
+                if neighbors < 2 or neighbors > 3:
+                    array[coords] = 0.0
+                elif 2 <= neighbors <= 3:
+                    array[coords] = 1.0
+            else:
+                if neighbors == 3:
+                    array[coords] = 1.0
+
+        VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway)).display()
