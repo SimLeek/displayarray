@@ -65,7 +65,6 @@ class VideoHandlerThread(threading.Thread):
         while msg_owner != 'quit':
             frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
             if frame is not None:
-                frame = frame
                 for c in self.callbacks:
                     frame_c = c(frame, self.cam_id)
                     if frame_c is not None:

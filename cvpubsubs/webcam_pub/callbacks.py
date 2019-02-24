@@ -19,7 +19,7 @@ def global_cv_display_callback(frame,  # type: np.ndarray
     SubscriberWindows.frame_dict[str(cam_id) + "frame"] = frame
 
 
-class function_display_callback(object):
+class function_display_callback(object):  # NOSONAR
     def __init__(self, display_function, finish_function=None):
         """Used for running arbitrary functions on pixels.
 
@@ -37,9 +37,18 @@ class function_display_callback(object):
         self.looping = True
         self.first_call = True
 
+        def _run_finisher(self, frame, finished, *args, **kwargs):
+            if not callable(finish_function):
+                WinCtrl.quit()
+            else:
+                finished = finish_function(frame, Ellipsis, finished, *args, **kwargs)
+                if finished:
+                    WinCtrl.quit()
+
         def _display_internal(self, frame, cam_id, *args, **kwargs):
             finished = True
             if self.first_call:
+                # return to display initial frame
                 self.first_call = False
                 return
             if self.looping:
@@ -50,12 +59,7 @@ class function_display_callback(object):
                     it.iternext()
             if finished:
                 self.looping = False
-                if not callable(finish_function):
-                    WinCtrl.quit()
-                else:
-                    finished = finish_function(frame, Ellipsis, finished, *args, **kwargs)
-                    if finished:
-                        WinCtrl.quit()
+                _run_finisher(self, frame, finished, *args, **kwargs)
 
         self.inner_function = _display_internal
 

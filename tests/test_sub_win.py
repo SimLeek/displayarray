@@ -40,6 +40,10 @@ class TestSubWin(ut.TestCase):
         img = np.random.uniform(0, 1, (300, 300, 3))
         w.VideoHandlerThread(video_source=img).display()
 
+    def test_image_args(self):
+        img = np.random.uniform(0, 1, (30, 30, 3))
+        w.VideoHandlerThread(video_source=img, request_size=(300, -1)).display()
+
     def test_sub_with_args(self):
         video_thread = w.VideoHandlerThread(video_source=0,
                                             callbacks=w.display_callbacks,
