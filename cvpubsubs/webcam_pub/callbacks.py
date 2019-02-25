@@ -76,8 +76,8 @@ class pytorch_function_display_callback(object):  # NOSONAR
         >>> from cvpubsubs.webcam_pub import VideoHandlerThread
         >>> img = np.zeros((300, 300, 3))
         >>> def fun(array, coords, finished):
-        ...     rgb = torch.empty(array.shape).uniform_(0,1).type(torch.DoubleTensor).to(array.device)/200.0
-        ...     array[coords] = (array[coords] + rgb[coords])%1.0
+        ...     rgb = torch.empty(array.shape).uniform_(0,1).type(torch.DoubleTensor).to(array.device)/150.0
+        ...     array[coords] = (array[coords+np.ones_like(coords)] + rgb[coords])%1.0
         >>> VideoHandlerThread(video_source=img, callbacks=pytorch_function_display_callback(fun)).display()
 
         thanks: https://medium.com/@awildtaber/building-a-rendering-engine-in-tensorflow-262438b2e062
