@@ -128,3 +128,39 @@ class TestSubWin(ut.TestCase):
                     array[coords] = 1.0
 
         VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway)).display()
+
+    def test_conway_life_pytorch(self):
+        import torch
+        from torch import functional as F
+        from cvpubsubs.webcam_pub import VideoHandlerThread
+        from cvpubsubs.webcam_pub.callbacks import pytorch_function_display_callback
+
+        img = np.ones((600, 800, 1))
+        img[10:590, 10:790, :] = 0
+
+        def fun(frame, coords, finished):
+            array = frame
+            neighbor_weights = torch.ones(torch.Size([3, 3]))
+            neighbor_weights[1, 1, ...] = 0
+            neighbor_weights = torch.Tensor(neighbor_weights).type_as(array).to(array.device)
+            neighbor_weights = neighbor_weights.squeeze()[None, None, :, :]
+            array = array.permute(2, 1, 0)[None, ...]
+            neighbors = torch.nn.functional.conv2d(array, neighbor_weights, stride=1, padding=1)
+            live_array = torch.where((neighbors < 2) | (neighbors > 3),
+                                            torch.zeros_like(array),
+                                            torch.where((2 <= neighbors) & (neighbors <= 3),
+                                                        torch.ones_like(array),
+                                                        array
+                                                        )
+                                            )
+            dead_array = torch.where(neighbors == 3,
+                                            torch.ones_like(array),
+                                            array)
+            array = torch.where(array == 1.0,
+                                live_array,
+                                dead_array
+                                )
+            array = array.squeeze().permute(1, 0)[...,None]
+            frame[...] = array[...]
+
+        VideoHandlerThread(video_source=img, callbacks=pytorch_function_display_callback(fun)).display()

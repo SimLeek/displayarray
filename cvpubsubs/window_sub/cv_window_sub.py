@@ -40,9 +40,9 @@ class SubscriberWindows(object):
     @staticmethod
     def set_global_frame_dict(name, *args):
         if len(str(name)) <= 1000:
-            SubscriberWindows.frame_dict[str(name) + "frame"] = [*args]
+            SubscriberWindows.frame_dict[str(name) + "frame"] = list(args)
         elif isinstance(name, np.ndarray):
-            SubscriberWindows.frame_dict[str(hash(str(name))) + "frame"] = [*args]
+            SubscriberWindows.frame_dict[str(hash(str(name))) + "frame"] = list(args)
         else:
             raise ValueError("Input window name too long.")
 
