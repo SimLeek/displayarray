@@ -6,6 +6,7 @@ import numpy as np
 from .winctrl import WinCtrl
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
 from localpubsub import NoData
+from cvpubsubs.window_sub.mouse_event import MouseEvent
 
 if False:
     from typing import List, Union, Callable, Any
@@ -36,6 +37,9 @@ class SubscriberWindows(object):
 
         self.callbacks = callbacks
         self.input_cams = video_sources
+        for name in self.window_names:
+            cv2.namedWindow(name + " (press ESC to quit)")
+            cv2.setMouseCallback(name + " (press ESC to quit)", self.handle_mouse)
 
     @staticmethod
     def set_global_frame_dict(name, *args):
@@ -66,6 +70,10 @@ class SubscriberWindows(object):
                 warnings.warn(
                     RuntimeWarning("Unknown key code: [{}]. Please report to cv_pubsubs issue page.".format(key_input))
                 )
+
+    def handle_mouse(self, event, x, y, flags, param):
+        mousey = MouseEvent(event, x, y, flags, param)
+        WinCtrl.mouse_pub.publish(mousey)
 
     def _display_frames(self, frames, win_num):
         if isinstance(frames, Exception):

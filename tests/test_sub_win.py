@@ -4,32 +4,28 @@ import unittest as ut
 import cvpubsubs.webcam_pub as w
 from cvpubsubs.window_sub import SubscriberWindows
 from cvpubsubs.window_sub.winctrl import WinCtrl
+from cvpubsubs.input import mouse_loop, key_loop
 
 if False:
     import numpy as np
-
-
-def print_keys_thread():
-    sub_key = WinCtrl.key_pub.make_sub()
-    sub_cmd = WinCtrl.win_cmd_pub.make_sub()
-    sub_cmd.return_on_no_data = ''
-    msg_cmd = ''
-    while msg_cmd != 'quit':
-        key_chr = sub_key.get(sub_key)  # type: np.ndarray
-        WinCtrl.key_pub.publish(None)  # consume data
-        if key_chr is not None:
-            print("key pressed: " + str(key_chr))
-        msg_cmd = sub_cmd.get()
-    WinCtrl.quit(force_all_read=False)
-
-
-def start_print_keys_thread():  # type: (...) -> threading.Thread
-    t = threading.Thread(target=print_keys_thread, args=())
-    t.start()
-    return t
+    from cvpubsubs.window_sub.mouse_event import MouseEvent
 
 
 class TestSubWin(ut.TestCase):
+
+    def test_mouse_loop(self):
+        @mouse_loop
+        def print_mouse_thread(mouse_event):
+            print(mouse_event)
+
+        w.VideoHandlerThread().display()
+
+    def test_key_loop(self):
+        @key_loop
+        def print_key_thread(key_chr):
+            print("key pressed: " + str(key_chr))
+
+        w.VideoHandlerThread().display()
 
     def test_sub(self):
         w.VideoHandlerThread().display()
@@ -136,6 +132,7 @@ class TestSubWin(ut.TestCase):
         from cvpubsubs.webcam_pub import VideoHandlerThread
         from cvpubsubs.callbacks import function_display_callback
         import numpy as np
+        import cv2
         img = np.zeros((50, 50, 1))
         img[0:5, 0:5, :] = 1
 
@@ -151,5 +148,14 @@ class TestSubWin(ut.TestCase):
             else:
                 if neighbors == 3:
                     array[coords] = 1.0
+
+        @mouse_loop
+        def conway_add(mouse_event  # type:MouseEvent
+                       ):
+            if 0 <= mouse_event.x < 50 and 0 <= mouse_event.y < 50:
+                if mouse_event.flags == cv2.EVENT_FLAG_LBUTTON:
+                    img[mouse_event.y - 5:mouse_event.y + 10, mouse_event.x - 5:mouse_event.x + 10, :] = 0.0
+                elif mouse_event.flags == cv2.EVENT_FLAG_RBUTTON:
+                    img[mouse_event.y - 5:mouse_event.y + 10, mouse_event.x - 5:mouse_event.x + 10, :] = 1.0
 
         VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway)).display()
