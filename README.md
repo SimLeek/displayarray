@@ -29,8 +29,26 @@ Python 2.7/3.5+ and PyPy.
                                         fps_limit = 8
                                         )
 
-    video_thread.display()
+#### handle mouse input
+    import cvpubsubs.webcam_pub as w
+    from cvpubsubs.input import mouse_loop
     
+    @mouse_loop
+    def print_mouse(mouse_event):
+        print(mouse_event)
+
+    w.VideoHandlerThread().display()
+
+#### take in key input
+    import cvpubsubs.webcam_pub as w
+    from cvpubsubs.input import key_loop
+
+    @key_loop
+    def print_key_thread(key_chr):
+        print("key pressed: " + str(key_chr))
+
+    w.VideoHandlerThread().display()
+
 #### Run your own functions on the frames
     import cvpubsubs.webcam_pub as w
     
