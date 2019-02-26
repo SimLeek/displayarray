@@ -1,8 +1,6 @@
 import threading
 import unittest as ut
 
-import numpy as np
-
 import cvpubsubs.webcam_pub as w
 from cvpubsubs.window_sub import SubscriberWindows
 from cvpubsubs.window_sub.winctrl import WinCtrl
@@ -61,6 +59,16 @@ class TestSubWin(ut.TestCase):
 
         w.VideoHandlerThread(callbacks=redden_frame_print_spam).display()
 
+    def test_sub_with_callback_exception(self):
+        def redden_frame_print_spam(frame, cam_id):
+            frame[:, :, 0] = 0
+            frame[:, :, 2] = 1 / 0
+
+        with self.assertRaises(ZeroDivisionError) as e:
+            v = w.VideoHandlerThread(callbacks=redden_frame_print_spam)
+            v.display()
+            self.assertEqual(v.exception_raised, e)
+
     def test_multi_cams_one_source(self):
         def cam_handler(frame, cam_id):
             SubscriberWindows.set_global_frame_dict(cam_id, frame, frame)
@@ -108,9 +116,26 @@ class TestSubWin(ut.TestCase):
 
         v.join()
 
+    def test_nested_frames_exception(self):
+        def nest_frame(frame, cam_id):
+            frame = np.asarray([[[[[[frame + 1 / 0]]]]], [[[[[frame]]], [[[frame]]]]]])
+            return frame
+
+        v = w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks)
+        v.start()
+
+        with self.assertRaises(ZeroDivisionError) as e:
+            SubscriberWindows(window_names=[str(i) for i in range(3)],
+                              video_sources=[str(0)]
+                              ).loop()
+            self.assertEqual(v.exception_raised, e)
+
+        v.join()
+
     def test_conway_life(self):
         from cvpubsubs.webcam_pub import VideoHandlerThread
-        from cvpubsubs.webcam_pub.callbacks import function_display_callback
+        from cvpubsubs.callbacks import function_display_callback
+        import numpy as np
         img = np.zeros((50, 50, 1))
         img[0:5, 0:5, :] = 1
 
@@ -128,39 +153,3 @@ class TestSubWin(ut.TestCase):
                     array[coords] = 1.0
 
         VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway)).display()
-
-    def test_conway_life_pytorch(self):
-        import torch
-        from torch import functional as F
-        from cvpubsubs.webcam_pub import VideoHandlerThread
-        from cvpubsubs.webcam_pub.callbacks import pytorch_function_display_callback
-
-        img = np.ones((600, 800, 1))
-        img[10:590, 10:790, :] = 0
-
-        def fun(frame, coords, finished):
-            array = frame
-            neighbor_weights = torch.ones(torch.Size([3, 3]))
-            neighbor_weights[1, 1, ...] = 0
-            neighbor_weights = torch.Tensor(neighbor_weights).type_as(array).to(array.device)
-            neighbor_weights = neighbor_weights.squeeze()[None, None, :, :]
-            array = array.permute(2, 1, 0)[None, ...]
-            neighbors = torch.nn.functional.conv2d(array, neighbor_weights, stride=1, padding=1)
-            live_array = torch.where((neighbors < 2) | (neighbors > 3),
-                                            torch.zeros_like(array),
-                                            torch.where((2 <= neighbors) & (neighbors <= 3),
-                                                        torch.ones_like(array),
-                                                        array
-                                                        )
-                                            )
-            dead_array = torch.where(neighbors == 3,
-                                            torch.ones_like(array),
-                                            array)
-            array = torch.where(array == 1.0,
-                                live_array,
-                                dead_array
-                                )
-            array = array.squeeze().permute(1, 0)[...,None]
-            frame[...] = array[...]
-
-        VideoHandlerThread(video_source=img, callbacks=pytorch_function_display_callback(fun)).display()
