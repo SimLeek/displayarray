@@ -6,6 +6,7 @@ from localpubsub import VariablePub, VariableSub
 
 class WinCtrl(object):
     key_pub = VariablePub()
+    mouse_pub = VariablePub()
     win_cmd_pub = VariablePub()
 
     @staticmethod
