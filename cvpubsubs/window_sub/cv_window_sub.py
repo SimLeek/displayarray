@@ -68,6 +68,8 @@ class SubscriberWindows(object):
                 )
 
     def _display_frames(self, frames, win_num):
+        if isinstance(frames, Exception):
+            raise frames
         for f in range(len(frames)):
             # detect nested:
             if isinstance(frames[f], (list, tuple)) or frames[f].dtype.num == 17 or len(frames[f].shape) > 3:
