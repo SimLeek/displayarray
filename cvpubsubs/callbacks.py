@@ -31,8 +31,8 @@ class function_display_callback(object):  # NOSONAR
         ...     array[coords[0:2]] = (array[coords[0:2]] + [r,g,b])%1.0
         >>> VideoHandlerThread(video_source=img, callbacks=function_display_callback(fun)).display()
 
-        :param display_function:
-        :param finish_function:
+        :param display_function: a function to run on the input image.
+        :param finish_function: a function to run on the input image when the other function finishes.
         """
         self.looping = True
         self.first_call = True

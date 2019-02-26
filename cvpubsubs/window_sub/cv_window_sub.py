@@ -40,9 +40,9 @@ class SubscriberWindows(object):
     @staticmethod
     def set_global_frame_dict(name, *args):
         if len(str(name)) <= 1000:
-            SubscriberWindows.frame_dict[str(name) + "frame"] = [*args]
+            SubscriberWindows.frame_dict[str(name) + "frame"] = list(args)
         elif isinstance(name, np.ndarray):
-            SubscriberWindows.frame_dict[str(hash(str(name))) + "frame"] = [*args]
+            SubscriberWindows.frame_dict[str(hash(str(name))) + "frame"] = list(args)
         else:
             raise ValueError("Input window name too long.")
 
@@ -68,6 +68,8 @@ class SubscriberWindows(object):
                 )
 
     def _display_frames(self, frames, win_num):
+        if isinstance(frames, Exception):
+            raise frames
         for f in range(len(frames)):
             # detect nested:
             if isinstance(frames[f], (list, tuple)) or frames[f].dtype.num == 17 or len(frames[f].shape) > 3:

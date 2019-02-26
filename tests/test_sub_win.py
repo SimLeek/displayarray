@@ -1,8 +1,6 @@
 import threading
 import unittest as ut
 
-import numpy as np
-
 import cvpubsubs.webcam_pub as w
 from cvpubsubs.window_sub import SubscriberWindows
 from cvpubsubs.window_sub.winctrl import WinCtrl
@@ -61,6 +59,16 @@ class TestSubWin(ut.TestCase):
 
         w.VideoHandlerThread(callbacks=redden_frame_print_spam).display()
 
+    def test_sub_with_callback_exception(self):
+        def redden_frame_print_spam(frame, cam_id):
+            frame[:, :, 0] = 0
+            frame[:, :, 2] = 1 / 0
+
+        with self.assertRaises(ZeroDivisionError) as e:
+            v = w.VideoHandlerThread(callbacks=redden_frame_print_spam)
+            v.display()
+            self.assertEqual(v.exception_raised, e)
+
     def test_multi_cams_one_source(self):
         def cam_handler(frame, cam_id):
             SubscriberWindows.set_global_frame_dict(cam_id, frame, frame)
@@ -108,9 +116,26 @@ class TestSubWin(ut.TestCase):
 
         v.join()
 
+    def test_nested_frames_exception(self):
+        def nest_frame(frame, cam_id):
+            frame = np.asarray([[[[[[frame + 1 / 0]]]]], [[[[[frame]]], [[[frame]]]]]])
+            return frame
+
+        v = w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks)
+        v.start()
+
+        with self.assertRaises(ZeroDivisionError) as e:
+            SubscriberWindows(window_names=[str(i) for i in range(3)],
+                              video_sources=[str(0)]
+                              ).loop()
+            self.assertEqual(v.exception_raised, e)
+
+        v.join()
+
     def test_conway_life(self):
         from cvpubsubs.webcam_pub import VideoHandlerThread
-        from cvpubsubs.webcam_pub.callbacks import function_display_callback
+        from cvpubsubs.callbacks import function_display_callback
+        import numpy as np
         img = np.zeros((50, 50, 1))
         img[0:5, 0:5, :] = 1
 
