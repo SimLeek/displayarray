@@ -4,13 +4,15 @@ import numpy as np
 
 from cvpubsubs.webcam_pub.pub_cam import pub_cam_thread
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
+from cvpubsubs.window_sub.winctrl import WinCtrl
+
 
 if False:
     from typing import Union, Tuple, Any, Callable, List, Optional
 
     FrameCallable = Callable[[np.ndarray, int], Optional[np.ndarray]]
 
-from cvpubsubs.webcam_pub.callbacks import global_cv_display_callback
+from cvpubsubs.callbacks import global_cv_display_callback
 
 display_callbacks = [global_cv_display_callback]
 
@@ -53,6 +55,7 @@ class VideoHandlerThread(threading.Thread):
         self.request_size = request_size
         self.high_speed = high_speed
         self.fps_limit = fps_limit
+        self.exception_raised = None
 
     def loop(self):
         """Continually gets frames from the video publisher, runs callbacks on them, and listens to commands."""
@@ -66,7 +69,14 @@ class VideoHandlerThread(threading.Thread):
             frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
             if frame is not None:
                 for c in self.callbacks:
-                    frame_c = c(frame, self.cam_id)
+                    try:
+                        frame_c = c(frame, self.cam_id)
+                    except Exception as e:
+                        import traceback
+                        CamCtrl.stop_cam(self.cam_id)
+                        WinCtrl.quit()
+                        self.exception_raised = e
+                        frame_c = self.exception_raised
                     if frame_c is not None:
                         frame = frame_c
             msg_owner = sub_owner.get()
@@ -93,3 +103,5 @@ class VideoHandlerThread(threading.Thread):
         self.start()
         SubscriberWindows(video_sources=[self.cam_id], callbacks=callbacks).loop()
         self.join()
+        if self.exception_raised is not None:
+            raise self.exception_raised
