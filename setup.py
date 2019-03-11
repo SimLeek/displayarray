@@ -15,7 +15,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 REQUIRES = [
     'opencv_python == 3.4.5.20',
-    'localpubsub == 0.0.3',
+    'localpubsub == 0.0.4',
     'numpy == 1.16.1'
 ]
 
