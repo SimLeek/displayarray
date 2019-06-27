@@ -1,0 +1,28 @@
+jobs:
+- job: Linux
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: $(PYTHON_VERSION)
+    - script: pip install -r requirements.txt
+      displayName: Install Python Requirements
+    - script: pip install cibuildwheel==0.10.1
+      displayName: Install cibuildwheel
+    - script: cibuildwheel --output-dir wheelhouse
+      displayName: Run cibuildwheel
+  strategy:
+    matrix:
+      Python 2.7:
+        PYTHON_VERSION: '2.7'
+        CIBW_BUILD: 'cp27*'
+      Python 3.5:
+        PYTHON_VERSION: '3.5'
+        CIBW_BUILD: 'cp35*'
+      Python 3.6:
+        PYTHON_VERSION: '3.6'
+        CIBW_BUILD: 'cp36*'
+      Python 3.7:
+        PYTHON_VERSION: '3.7'
+        CIBW_BUILD: 'cp37*'
