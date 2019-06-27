@@ -8,7 +8,7 @@ jobs:
         versionSpec: $(PYTHON_VERSION)
     - script: pip install -r requirements.txt
       displayName: Install Python Requirements
-    - script: pip install cibuildwheel==0.10.1
+    - script: pip install cibuildwheel
       displayName: Install cibuildwheel
     - script: cibuildwheel --output-dir wheelhouse
       displayName: Run cibuildwheel
