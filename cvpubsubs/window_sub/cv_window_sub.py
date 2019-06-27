@@ -5,6 +5,7 @@ import numpy as np
 
 from .winctrl import WinCtrl
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
+from cvpubsubs.webcam_pub.frame_handler import VideoHandlerThread
 from localpubsub import NoData
 from cvpubsubs.window_sub.mouse_event import MouseEvent
 
@@ -112,3 +113,16 @@ class SubscriberWindows(object):
         sub_cmd.release()
         WinCtrl.quit(force_all_read=False)
         self.__stop_all_cams()
+
+
+def display(*vids, names=[]):
+    vid_threads = [VideoHandlerThread(v) for v in vids]
+    for v in vid_threads:
+        v.start()
+    if len(names) == 0:
+        names = ["window {}".format(i) for i in range(len(vids))]
+    SubscriberWindows(window_names=names,
+                      video_sources=vids
+                      ).loop()
+    for v in vid_threads:
+        v.join()
