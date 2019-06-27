@@ -4,7 +4,9 @@ import unittest as ut
 import cvpubsubs.webcam_pub as w
 from cvpubsubs.window_sub import SubscriberWindows
 from cvpubsubs.window_sub.winctrl import WinCtrl
+from cvpubsubs import display
 from cvpubsubs.input import mouse_loop, key_loop
+import numpy as np
 
 if False:
     import numpy as np
@@ -159,3 +161,19 @@ class TestSubWin(ut.TestCase):
                     img[mouse_event.y - 5:mouse_event.y + 10, mouse_event.x - 5:mouse_event.x + 10, :] = 1.0
 
         VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway)).display()
+
+    def test_double_win(self):
+        vid1 = np.ones((100, 100))
+        vid2 = np.zeros((100, 100))
+        t1 = w.VideoHandlerThread(vid1)
+        t2 = w.VideoHandlerThread(vid2)
+        t1.start()
+        t2.start()
+        SubscriberWindows(window_names=['cammy', 'cammy2'],
+                          video_sources=[vid1, vid2]
+                          ).loop()
+        t1.join()
+        t1.join()
+
+    def test_display(self):
+        display(np.ones((100, 100)), np.zeros((100, 100)))
