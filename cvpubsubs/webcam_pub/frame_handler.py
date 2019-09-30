@@ -5,7 +5,7 @@ import numpy as np
 from cvpubsubs.webcam_pub.pub_cam import pub_cam_thread
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
 from cvpubsubs.window_sub.winctrl import WinCtrl
-
+from cvpubsubs.serialize import uid_for_source
 
 if False:
     from typing import Union, Tuple, Any, Callable, List, Optional
@@ -21,7 +21,7 @@ class VideoHandlerThread(threading.Thread):
     "Thread for publishing frames from a video source."
 
     def __init__(self, video_source=0,  # type: Union[int, str, np.ndarray]
-                 callbacks=(global_cv_display_callback,),  # type: Union[List[FrameCallable], FrameCallable]
+                 callbacks=(),  # type: Union[List[FrameCallable], FrameCallable]
                  request_size=(-1, -1),  # type: Tuple[int, int]
                  high_speed=True,  # type: bool
                  fps_limit=240  # type: float
@@ -40,13 +40,7 @@ class VideoHandlerThread(threading.Thread):
         :type fps_limit: float
         """
         super(VideoHandlerThread, self).__init__(target=self.loop, args=())
-        if isinstance(video_source, (int, str)):
-            self.cam_id = str(video_source)
-        elif isinstance(video_source, np.ndarray):
-            self.cam_id = str(hash(str(video_source)))
-        else:
-            raise TypeError(
-                "Only strings or ints representing cameras, or numpy arrays representing pictures supported.")
+        self.cam_id = uid_for_source(video_source)
         self.video_source = video_source
         if callable(callbacks):
             self.callbacks = [callbacks]
@@ -68,17 +62,22 @@ class VideoHandlerThread(threading.Thread):
         while msg_owner != 'quit':
             frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
             if frame is not None:
+                frame_c = None
                 for c in self.callbacks:
                     try:
-                        frame_c = c(frame, self.cam_id)
+                        frame_c = c(frame)
+                    except TypeError as te:
+                        raise TypeError("Callback functions for cvpubsub need to accept two arguments: array and uid")
                     except Exception as e:
-                        import traceback
+                        self.exception_raised = e
+                        frame = frame_c = self.exception_raised
                         CamCtrl.stop_cam(self.cam_id)
                         WinCtrl.quit()
-                        self.exception_raised = e
-                        frame_c = self.exception_raised
-                    if frame_c is not None:
-                        frame = frame_c
+                        raise e
+                if frame_c is not None:
+                    global_cv_display_callback(frame_c, self.cam_id)
+                else:
+                    global_cv_display_callback(frame, self.cam_id)
             msg_owner = sub_owner.get()
         sub_owner.release()
         sub_cam.release()
@@ -95,11 +94,6 @@ class VideoHandlerThread(threading.Thread):
         :param callbacks: List of callbacks to be run on frames before displaying to the screen.
         :type callbacks: List[Callable[[List[np.ndarray]], Any]]
         """
-        if global_cv_display_callback not in self.callbacks:
-            if isinstance(self.callbacks, tuple):
-                self.callbacks = self.callbacks + (global_cv_display_callback,)
-            else:
-                self.callbacks.append(global_cv_display_callback)
         self.start()
         SubscriberWindows(video_sources=[self.cam_id], callbacks=callbacks).loop()
         self.join()

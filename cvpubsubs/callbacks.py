@@ -45,7 +45,7 @@ class function_display_callback(object):  # NOSONAR
                 if finished:
                     WinCtrl.quit()
 
-        def _display_internal(self, frame, cam_id, *args, **kwargs):
+        def _display_internal(self, frame, *args, **kwargs):
             finished = True
             if self.first_call:
                 # return to display initial frame

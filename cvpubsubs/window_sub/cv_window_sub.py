@@ -8,10 +8,11 @@ from cvpubsubs.webcam_pub.camctrl import CamCtrl
 from cvpubsubs.webcam_pub.frame_handler import VideoHandlerThread
 from localpubsub import NoData
 from cvpubsubs.window_sub.mouse_event import MouseEvent
+from cvpubsubs.serialize import uid_for_source
 
-if False:
-    from typing import List, Union, Callable, Any
-    import numpy as np
+from typing import List, Union, Callable, Any, Dict
+import numpy as np
+from cvpubsubs.callbacks import global_cv_display_callback
 
 
 class SubscriberWindows(object):
@@ -24,23 +25,32 @@ class SubscriberWindows(object):
                  video_sources=(0,),  # type: List[Union[str,int]]
                  callbacks=(None,),  # type: List[Callable[[List[np.ndarray]], Any]]
                  ):
-        self.window_names = window_names
         self.source_names = []
-        for name in video_sources:
-            if isinstance(name, np.ndarray):
-                self.source_names.append(str(hash(str(name))))
-                self.input_vid_global_names = [str(hash(str(name))) + "frame" for name in video_sources]
-            elif len(str(name)) <= 1000:
-                self.source_names.append(str(name))
-                self.input_vid_global_names = [str(name) + "frame" for name in video_sources]
-            else:
-                raise ValueError("Input window name too long.")
+        self.close_threads = None
+        self.frames = []
+        self.input_vid_global_names = []
+        self.window_names = []
+        self.input_cams = []
 
+        for name in video_sources:
+            self.add_source(name)
         self.callbacks = callbacks
-        self.input_cams = video_sources
-        for name in self.window_names:
-            cv2.namedWindow(name + " (press ESC to quit)")
-            cv2.setMouseCallback(name + " (press ESC to quit)", self.handle_mouse)
+        for name in window_names:
+            self.add_window(name)
+
+    def add_source(self, name):
+        uid = uid_for_source(name)
+        self.source_names.append(uid)
+        self.input_vid_global_names.append(uid + "frame")
+        self.input_cams.append(name)
+
+    def add_window(self, name):
+        self.window_names.append(name)
+        cv2.namedWindow(name + " (press ESC to quit)")
+        cv2.setMouseCallback(name + " (press ESC to quit)", self.handle_mouse)
+
+    def add_callback(self, callback):
+        self.callbacks.append(callback)
 
     @staticmethod
     def set_global_frame_dict(name, *args):
@@ -76,13 +86,13 @@ class SubscriberWindows(object):
         mousey = MouseEvent(event, x, y, flags, param)
         WinCtrl.mouse_pub.publish(mousey)
 
-    def _display_frames(self, frames, win_num):
+    def _display_frames(self, frames, win_num, ids=None):
         if isinstance(frames, Exception):
             raise frames
         for f in range(len(frames)):
             # detect nested:
             if isinstance(frames[f], (list, tuple)) or frames[f].dtype.num == 17 or len(frames[f].shape) > 3:
-                win_num = self._display_frames(frames[f], win_num)
+                win_num = self._display_frames(frames[f], win_num, ids)
             else:
                 cv2.imshow(self.window_names[win_num % len(self.window_names)] + " (press ESC to quit)", frames[f])
                 win_num += 1
@@ -94,12 +104,39 @@ class SubscriberWindows(object):
             if self.input_vid_global_names[i] in self.frame_dict and \
                     not isinstance(self.frame_dict[self.input_vid_global_names[i]], NoData):
                 if len(self.callbacks) > 0 and self.callbacks[i % len(self.callbacks)] is not None:
-                    frames = self.callbacks[i % len(self.callbacks)](self.frame_dict[self.input_vid_global_names[i]])
+                    self.frames = self.callbacks[i % len(self.callbacks)](
+                        self.frame_dict[self.input_vid_global_names[i]])
                 else:
-                    frames = self.frame_dict[self.input_vid_global_names[i]]
-                if isinstance(frames, np.ndarray) and len(frames.shape) <= 3:
-                    frames = [frames]
-                win_num = self._display_frames(frames, win_num)
+                    self.frames = self.frame_dict[self.input_vid_global_names[i]]
+                if isinstance(self.frames, np.ndarray) and len(self.frames.shape) <= 3:
+                    self.frames = [self.frames]
+                win_num = self._display_frames(self.frames, win_num)
+
+    def update(self, arr=None, id=None):
+        if arr is not None and id is not None:
+            global_cv_display_callback(arr, id)
+            if id not in self.input_cams:
+                self.add_source(id)
+                self.add_window(id)
+        sub_cmd = WinCtrl.win_cmd_sub()
+        self.update_window_frames()
+        msg_cmd = sub_cmd.get()
+        key = self.handle_keys(cv2.waitKey(1))
+        return msg_cmd, key
+
+    def wait_for_init(self):
+        msg_cmd=""
+        key = ""
+        while msg_cmd != 'quit' and key != 'quit' and len(self.frames)==0:
+            msg_cmd, key = self.update()
+
+    def end(self):
+        if self.close_threads is not None:
+            for t in self.close_threads:
+                t.join()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end()
 
     # todo: figure out how to get the red x button to work. Try: https://stackoverflow.com/a/37881722/782170
     def loop(self):
@@ -107,22 +144,57 @@ class SubscriberWindows(object):
         msg_cmd = ''
         key = ''
         while msg_cmd != 'quit' and key != 'quit':
-            self.update_window_frames()
-            msg_cmd = sub_cmd.get()
-            key = self.handle_keys(cv2.waitKey(1))
+            msg_cmd, key = self.update()
         sub_cmd.release()
         WinCtrl.quit(force_all_read=False)
         self.__stop_all_cams()
 
 
-def display(*vids, names=[]):
-    vid_threads = [VideoHandlerThread(v) for v in vids]
+from cvpubsubs.callbacks import global_cv_display_callback
+
+from threading import Thread
+
+
+def display(*vids,
+            callbacks: Union[Dict[Any, Callable], List[Callable], Callable, None] = None,
+            window_names=[],
+            blocking=False):
+    vid_threads = []
+    if isinstance(callbacks, Dict):
+        for v in vids:
+            v_name = uid_for_source(v)
+            v_callbacks = []
+            if v_name in callbacks:
+                v_callbacks.extend(callbacks[v_name])
+            if v in callbacks:
+                v_callbacks.extend(callbacks[v])
+            vid_threads.append(VideoHandlerThread(v, callbacks=v_callbacks))
+    elif isinstance(callbacks, List):
+        for v in vids:
+            vid_threads.append(VideoHandlerThread(v, callbacks=callbacks))
+    elif isinstance(callbacks, Callable):
+        for v in vids:
+            vid_threads.append(VideoHandlerThread(v, callbacks=[callbacks]))
+    else:
+        for v in vids:
+            vid_threads.append(VideoHandlerThread(v))
     for v in vid_threads:
         v.start()
-    if len(names) == 0:
-        names = ["window {}".format(i) for i in range(len(vids))]
-    SubscriberWindows(window_names=names,
-                      video_sources=vids
-                      ).loop()
-    for v in vid_threads:
-        v.join()
+    if len(window_names) == 0:
+        window_names = ["window {}".format(i) for i in range(len(vids))]
+    if blocking:
+        SubscriberWindows(window_names=window_names,
+                          video_sources=vids
+                          ).loop()
+        for v in vid_threads:
+            v.join()
+    else:
+        s = SubscriberWindows(window_names=window_names,
+                              video_sources=vids
+                              )
+        s.close_threads = vid_threads
+        v_names = []
+        for v in vids:
+            v_name = uid_for_source(v)
+            v_names.append(v_name)
+        return s, v_names
