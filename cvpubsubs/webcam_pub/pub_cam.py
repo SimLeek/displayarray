@@ -6,6 +6,7 @@ import numpy as np
 
 from cvpubsubs.webcam_pub.camctrl import CamCtrl
 from .np_cam import NpCam
+from cvpubsubs.serialize import uid_for_source
 
 if False:
     from typing import Union, Tuple
@@ -28,12 +29,7 @@ def pub_cam_loop(cam_id,  # type: Union[int, str]
     :return: True if loop ended normally, False if it failed somehow.
     """
 
-    if isinstance(cam_id, (int, str)):
-        name = str(cam_id)
-    elif isinstance(cam_id, np.ndarray):
-        name = str(hash(str(cam_id)))
-    else:
-        raise TypeError("Only strings or ints representing cameras, or numpy arrays representing pictures supported.")
+    name = uid_for_source(cam_id)
 
     if isinstance(cam_id, (int, str)):
         cam = cv2.VideoCapture(cam_id)
