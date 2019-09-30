@@ -42,7 +42,6 @@ class TestSubWin(ut.TestCase):
 
     def test_sub_with_args(self):
         video_thread = w.VideoHandlerThread(video_source=0,
-                                            callbacks=w.display_callbacks,
                                             request_size=(800, 600),
                                             high_speed=False,
                                             fps_limit=8
@@ -51,14 +50,14 @@ class TestSubWin(ut.TestCase):
         video_thread.display()
 
     def test_sub_with_callback(self):
-        def redden_frame_print_spam(frame, cam_id):
+        def redden_frame_print_spam(frame):
             frame[:, :, 0] = 0
             frame[:, :, 2] = 0
 
         w.VideoHandlerThread(callbacks=redden_frame_print_spam).display()
 
     def test_sub_with_callback_exception(self):
-        def redden_frame_print_spam(frame, cam_id):
+        def redden_frame_print_spam(frame):
             frame[:, :, 0] = 0
             frame[:, :, 2] = 1 / 0
 
@@ -68,54 +67,20 @@ class TestSubWin(ut.TestCase):
             self.assertEqual(v.exception_raised, e)
 
     def test_multi_cams_one_source(self):
-        def cam_handler(frame, cam_id):
-            SubscriberWindows.set_global_frame_dict(cam_id, frame, frame)
+        display(0, window_names=['cammy','cammy2'], blocking=True)
 
-        t = w.VideoHandlerThread(0, [cam_handler],
-                                 request_size=(1280, 720),
-                                 high_speed=True,
-                                 fps_limit=240
-                                 )
-
-        t.start()
-
-        SubscriberWindows(window_names=['cammy', 'cammy2'],
-                          video_sources=[str(0)]
-                          ).loop()
-
-        t.join()
-
-    @ut.skip("I don't have stereo cams... :(")
     def test_multi_cams_multi_source(self):
-        t1 = w.VideoHandlerThread(0, request_size=(1920, 1080))
-        t2 = w.VideoHandlerThread(1, request_size=(1920, 1080))
-
-        t1.start()
-        t2.start()
-
-        SubscriberWindows(window_names=['cammy', 'cammy2'],
-                          video_sources=[0, 1]
-                          ).loop()
-
-        t1.join()
-        t1.join()
+        display(0, np.random.uniform(0.0, 1.0, (500,500)), blocking=True)
 
     def test_nested_frames(self):
-        def nest_frame(frame, cam_id):
+        def nest_frame(frame):
             frame = np.asarray([[[[[[frame]]]]], [[[[[frame]]], [[[frame]]]]]])
             return frame
 
-        v = w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks)
-        v.start()
-
-        SubscriberWindows(window_names=[str(i) for i in range(3)],
-                          video_sources=[str(0)]
-                          ).loop()
-
-        v.join()
+        display(0, callbacks=nest_frame, window_names=["1", "2", "3"], blocking=True)
 
     def test_nested_frames_exception(self):
-        def nest_frame(frame, cam_id):
+        def nest_frame(frame):
             frame = np.asarray([[[[[[frame + 1 / 0]]]]], [[[[[frame]]], [[[frame]]]]]])
             return frame
 
@@ -176,4 +141,4 @@ class TestSubWin(ut.TestCase):
         t1.join()
 
     def test_display(self):
-        display(np.ones((100, 100)), np.zeros((100, 100)))
+        display(np.ones((100, 100)), np.zeros((100, 100)), blocking=True)

@@ -94,11 +94,6 @@ class VideoHandlerThread(threading.Thread):
         :param callbacks: List of callbacks to be run on frames before displaying to the screen.
         :type callbacks: List[Callable[[List[np.ndarray]], Any]]
         """
-        if global_cv_display_callback not in self.callbacks:
-            if isinstance(self.callbacks, tuple):
-                self.callbacks = self.callbacks + (global_cv_display_callback,)
-            else:
-                self.callbacks.append(global_cv_display_callback)
         self.start()
         SubscriberWindows(video_sources=[self.cam_id], callbacks=callbacks).loop()
         self.join()
