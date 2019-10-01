@@ -8,11 +8,11 @@ from localpubsub import NoData
 
 from displayarray.callbacks import global_cv_display_callback
 from displayarray.uid import uid_for_source
-from displayarray.webcam_pub import camctrl
-from displayarray.webcam_pub.frame_handler import FrameCallable
-from displayarray.webcam_pub.frame_handler import VideoHandlerThread
-from displayarray.window_sub.mouse_event import MouseEvent
-from displayarray.window_sub import winctrl
+from displayarray.frame_publising import subscriber_dictionary
+from displayarray.frame_publising.frame_update_thread import FrameCallable
+from displayarray.frame_publising.frame_update_thread import VideoHandlerThread
+from displayarray.input import MouseEvent
+from displayarray.subscriber_window import window_commands
 
 
 class SubscriberWindows(object):
@@ -61,7 +61,7 @@ class SubscriberWindows(object):
 
     def __stop_all_cams(self):
         for c in self.source_names:
-            camctrl.stop_cam(c)
+            subscriber_dictionary.stop_cam(c)
 
     def handle_keys(
         self, key_input  # type: int
@@ -70,12 +70,12 @@ class SubscriberWindows(object):
         if key_input in self.ESC_KEY_CODES:
             for name in self.window_names:
                 cv2.destroyWindow(name + " (press ESC to quit)")
-            winctrl.quit()
+            window_commands.quit()
             self.__stop_all_cams()
             return "quit"
         elif key_input not in [-1, 0]:
             try:
-                winctrl.key_pub.publish(chr(key_input))
+                window_commands.key_pub.publish(chr(key_input))
             except ValueError:
                 warnings.warn(
                     RuntimeWarning(
@@ -88,7 +88,7 @@ class SubscriberWindows(object):
     def handle_mouse(self, event, x, y, flags, param):
         """Capture mouse input for mouse control subscriber threads."""
         mousey = MouseEvent(event, x, y, flags, param)
-        winctrl.mouse_pub.publish(mousey)
+        window_commands.mouse_pub.publish(mousey)
 
     def _display_frames(self, frames, win_num, ids=None):
         if isinstance(frames, Exception):
@@ -137,7 +137,7 @@ class SubscriberWindows(object):
             if id not in self.input_cams:
                 self.add_source(id)
                 self.add_window(id)
-        sub_cmd = winctrl.win_cmd_sub()
+        sub_cmd = window_commands.win_cmd_sub()
         self.update_window_frames()
         msg_cmd = sub_cmd.get()
         key = self.handle_keys(cv2.waitKey(1))
@@ -152,7 +152,7 @@ class SubscriberWindows(object):
 
     def end(self):
         """Close all threads. Should be used with non-blocking mode."""
-        winctrl.quit(force_all_read=False)
+        window_commands.quit(force_all_read=False)
         self.__stop_all_cams()
         if self.close_threads is not None:
             for t in self.close_threads:
@@ -163,13 +163,13 @@ class SubscriberWindows(object):
 
     def loop(self):
         """Continually update window frame. OpenCV only allows this in the main thread."""
-        sub_cmd = winctrl.win_cmd_sub()
+        sub_cmd = window_commands.win_cmd_sub()
         msg_cmd = ""
         key = ""
         while msg_cmd != "quit" and key != "quit":
             msg_cmd, key = self.update()
         sub_cmd.release()
-        winctrl.quit(force_all_read=False)
+        window_commands.quit(force_all_read=False)
         self.__stop_all_cams()
 
 

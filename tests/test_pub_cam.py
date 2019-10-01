@@ -1,4 +1,4 @@
-import displayarray.webcam_pub as w
+import displayarray.frame_publising as w
 import unittest as ut
 
 
@@ -8,7 +8,7 @@ class TestFrameHandler(ut.TestCase):
     def test_handler(self):
         def test_frame_handler(frame, cam_id):
             if self.i == 200:
-                w.camctrl.stop_cam(cam_id)
+                w.subscriber_dictionary.stop_cam(cam_id)
             if self.i % 100 == 0:
                 print(frame.shape)
             self.i += 1

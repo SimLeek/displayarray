@@ -1,6 +1,3 @@
-import threading
-import logging
-
 from localpubsub import VariablePub, VariableSub
 
 key_pub = VariablePub()
