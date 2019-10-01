@@ -1,9 +1,27 @@
-from displayarray.window_sub import winctrl
+from displayarray.subscriber_window import window_commands
 import threading
 import time
 
 from typing import Callable
-from displayarray.window_sub.mouse_event import MouseEvent
+
+
+class MouseEvent(object):
+    """Holds all the OpenCV mouse event information."""
+
+    def __init__(self, event, x, y, flags, param):
+        self.event = event
+        self.x = x
+        self.y = y
+        self.flags = flags
+        self.param = param
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return "event:{}\nx,y:{},{}\nflags:{}\nparam:{}\n".format(
+            self.event, self.x, self.y, self.flags, self.param
+        )
 
 
 class _mouse_thread(object):  # NOSONAR
@@ -11,7 +29,7 @@ class _mouse_thread(object):  # NOSONAR
 
     def __init__(self, f):
         self.f = f
-        self.sub_mouse = winctrl.mouse_pub.make_sub()
+        self.sub_mouse = window_commands.mouse_pub.make_sub()
 
     def __call__(self, *args, **kwargs):
         """Call the function this was set up with."""
@@ -23,8 +41,8 @@ class _mouse_loop_thread(object):  # NOSONAR
 
     def __init__(self, f, run_when_no_events=False, fps=60):
         self.f = f
-        self.sub_mouse = winctrl.mouse_pub.make_sub()
-        self.sub_cmd = winctrl.win_cmd_pub.make_sub()
+        self.sub_mouse = window_commands.mouse_pub.make_sub()
+        self.sub_cmd = window_commands.win_cmd_pub.make_sub()
         self.sub_cmd.return_on_no_data = ""
         self.run_when_no_events = run_when_no_events
         self.fps = fps
@@ -40,7 +58,7 @@ class _mouse_loop_thread(object):  # NOSONAR
                 self.f(None, *args, **kwargs)
             msg_cmd = self.sub_cmd.get()
             time.sleep(1.0 / self.fps)
-        winctrl.quit(force_all_read=False)
+        window_commands.quit(force_all_read=False)
 
 
 class mouse_loop(object):  # NOSONAR
@@ -60,7 +78,7 @@ class _key_thread(object):  # NOSONAR
 
     def __init__(self, f):
         self.f = f
-        self.sub_key = winctrl.key_pub.make_sub()
+        self.sub_key = window_commands.key_pub.make_sub()
 
     def __call__(self, *args, **kwargs):
         """Call the function this was set up with."""
@@ -72,8 +90,8 @@ class _key_loop_thread(object):  # NOSONAR
 
     def __init__(self, f, run_when_no_events=False, fps=60):
         self.f = f
-        self.sub_key = winctrl.key_pub.make_sub()
-        self.sub_cmd = winctrl.win_cmd_pub.make_sub()
+        self.sub_key = window_commands.key_pub.make_sub()
+        self.sub_cmd = window_commands.win_cmd_pub.make_sub()
         self.sub_cmd.return_on_no_data = ""
         self.run_when_no_events = run_when_no_events
         self.fps = fps
@@ -89,7 +107,7 @@ class _key_loop_thread(object):  # NOSONAR
                 self.f(None, *args, **kwargs)
             msg_cmd = self.sub_cmd.get()
             time.sleep(1.0 / self.fps)
-        winctrl.quit(force_all_read=False)
+        window_commands.quit(force_all_read=False)
 
 
 class key_loop(object):  # NOSONAR

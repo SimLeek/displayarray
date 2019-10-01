@@ -1,4 +1,4 @@
-from displayarray.window_sub import winctrl
+from displayarray.subscriber_window import window_commands
 import numpy as np
 
 from typing import Union
@@ -13,7 +13,7 @@ def global_cv_display_callback(frame: np.ndarray, cam_id: Union[int, str]):
     :param cam_id: The video or image source
     :type cam_id: Union[int, str]
     """
-    from displayarray.window_sub import SubscriberWindows
+    from displayarray.subscriber_window import SubscriberWindows
 
     SubscriberWindows.FRAME_DICT[str(cam_id) + "frame"] = frame
 
@@ -41,11 +41,11 @@ class function_display_callback(object):  # NOSONAR
 
         def _run_finisher(self, frame, finished, *args, **kwargs):
             if not callable(finish_function):
-                winctrl.quit()
+                window_commands.quit()
             else:
                 finished = finish_function(frame, Ellipsis, finished, *args, **kwargs)
                 if finished:
-                    winctrl.quit()
+                    window_commands.quit()
 
         def _display_internal(self, frame, *args, **kwargs):
             finished = True

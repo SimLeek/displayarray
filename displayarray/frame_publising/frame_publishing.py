@@ -4,8 +4,8 @@ import time
 import cv2
 import numpy as np
 
-from displayarray.webcam_pub import camctrl
-from .np_cam import NpCam
+from displayarray.frame_publising import subscriber_dictionary
+from .np_to_opencv import NpCam
 from displayarray.uid import uid_for_source
 
 from typing import Union, Tuple
@@ -40,12 +40,12 @@ def pub_cam_loop(
             "Only strings or ints representing cameras, or numpy arrays representing pictures supported."
         )
 
-    camctrl.register_cam(name)
+    subscriber_dictionary.register_cam(name)
 
     # cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)
     frame_counter = 0
 
-    sub = camctrl.cam_cmd_sub(name)
+    sub = subscriber_dictionary.cam_cmd_sub(name)
     sub.return_on_no_data = ""
     msg = ""
 
@@ -56,7 +56,7 @@ def pub_cam_loop(
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
 
     if not cam.isOpened():
-        camctrl.CV_CAMS_DICT[name].status_pub.publish("failed")
+        subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
         return False
     now = time.time()
     while msg != "quit":
@@ -65,14 +65,14 @@ def pub_cam_loop(
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
         if ret is False or not isinstance(frame, np.ndarray):
             cam.release()
-            camctrl.CV_CAMS_DICT[name].status_pub.publish("failed")
+            subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
             return False
         if cam.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
             frame_counter += 1
             if frame_counter >= cam.get(cv2.CAP_PROP_FRAME_COUNT):
                 frame_counter = 0
                 cam = cv2.VideoCapture(cam_id)
-        camctrl.CV_CAMS_DICT[name].frame_pub.publish(frame)
+        subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)
         msg = sub.get()
     sub.release()
 

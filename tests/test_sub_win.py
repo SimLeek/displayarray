@@ -1,12 +1,11 @@
 import unittest as ut
 
-import displayarray.webcam_pub as w
-from displayarray.window_sub import SubscriberWindows
+import displayarray.frame_publising as w
+from displayarray.subscriber_window import SubscriberWindows
 from displayarray import display
-from displayarray.input import mouse_loop, key_loop
+from displayarray.input import mouse_loop, key_loop, MouseEvent
 
 import numpy as np
-from displayarray.window_sub.mouse_event import MouseEvent
 
 
 class TestSubWin(ut.TestCase):
@@ -89,7 +88,7 @@ class TestSubWin(ut.TestCase):
         v.join()
 
     def test_conway_life(self):
-        from displayarray.webcam_pub import VideoHandlerThread
+        from displayarray.frame_publising import VideoHandlerThread
         from displayarray.callbacks import function_display_callback
         import numpy as np
         import cv2

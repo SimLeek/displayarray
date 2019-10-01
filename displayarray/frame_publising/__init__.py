@@ -8,8 +8,8 @@ pub_cam_thread continually publishes updates to arrays, videos, and cameras
 np_cam simulates numpy arrays as OpenCV cameras
 """
 
-from . import camctrl
-from .frame_handler import VideoHandlerThread
-from .get_cam_ids import get_cam_ids
-from .np_cam import NpCam
-from .pub_cam import pub_cam_thread
+from . import subscriber_dictionary
+from .frame_update_thread import VideoHandlerThread
+from .get_frame_ids import get_cam_ids
+from .np_to_opencv import NpCam
+from .frame_publishing import pub_cam_thread

@@ -5,9 +5,9 @@ import numpy as np
 
 from displayarray.callbacks import global_cv_display_callback
 from displayarray.uid import uid_for_source
-from displayarray.webcam_pub import camctrl
-from displayarray.webcam_pub.pub_cam import pub_cam_thread
-from displayarray.window_sub import winctrl
+from displayarray.frame_publising import subscriber_dictionary
+from displayarray.frame_publising.frame_publishing import pub_cam_thread
+from displayarray.subscriber_window import window_commands
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
@@ -19,7 +19,7 @@ class VideoHandlerThread(threading.Thread):
         self,
         video_source: Union[int, str, np.ndarray] = 0,
         callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
-        request_size: Tuple[int, int] = (-1, -1),
+        request_size: Tuple[int, int] = (99999, 99999),
         high_speed: bool = True,
         fps_limit: float = 240,
     ):
@@ -38,7 +38,7 @@ class VideoHandlerThread(threading.Thread):
         self.exception_raised = None
 
     def __wait_for_cam_id(self):
-        while str(self.cam_id) not in camctrl.CV_CAMS_DICT:
+        while str(self.cam_id) not in subscriber_dictionary.CV_CAMS_DICT:
             continue
 
     def __apply_callbacks_to_frame(self, frame):
@@ -54,8 +54,8 @@ class VideoHandlerThread(threading.Thread):
                 except Exception as e:
                     self.exception_raised = e
                     frame = frame_c = self.exception_raised
-                    camctrl.stop_cam(self.cam_id)
-                    winctrl.quit()
+                    subscriber_dictionary.stop_cam(self.cam_id)
+                    window_commands.quit()
                     raise e
             if frame_c is not None:
                 global_cv_display_callback(frame_c, self.cam_id)
@@ -69,8 +69,8 @@ class VideoHandlerThread(threading.Thread):
         )
         self.__wait_for_cam_id()
 
-        sub_cam = camctrl.cam_frame_sub(str(self.cam_id))
-        sub_owner = camctrl.handler_cmd_sub(str(self.cam_id))
+        sub_cam = subscriber_dictionary.cam_frame_sub(str(self.cam_id))
+        sub_owner = subscriber_dictionary.handler_cmd_sub(str(self.cam_id))
         msg_owner = sub_owner.return_on_no_data = ""
         while msg_owner != "quit":
             frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
@@ -78,7 +78,7 @@ class VideoHandlerThread(threading.Thread):
             msg_owner = sub_owner.get()
         sub_owner.release()
         sub_cam.release()
-        camctrl.stop_cam(self.cam_id)
+        subscriber_dictionary.stop_cam(self.cam_id)
         t.join()
 
     def display(self, callbacks: List[Callable[[np.ndarray], Any]] = None):
@@ -89,7 +89,7 @@ class VideoHandlerThread(threading.Thread):
 
         :param callbacks: List of callbacks to be run on frames before displaying to the screen.
         """
-        from displayarray.window_sub import SubscriberWindows
+        from displayarray.subscriber_window import SubscriberWindows
 
         if callbacks is None:
             callbacks = []
