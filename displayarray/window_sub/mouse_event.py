@@ -1,4 +1,6 @@
 class MouseEvent(object):
+    """Holds all the OpenCV mouse event information."""
+
     def __init__(self, event, x, y, flags, param):
         self.event = event
         self.x = x
@@ -10,4 +12,6 @@ class MouseEvent(object):
         return self.__str__()
 
     def __str__(self):
-        return "event:{}\nx,y:{},{}\nflags:{}\nparam:{}\n".format(self.event, self.x, self.y, self.flags, self.param)
+        return "event:{}\nx,y:{},{}\nflags:{}\nparam:{}\n".format(
+            self.event, self.x, self.y, self.flags, self.param
+        )
