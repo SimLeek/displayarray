@@ -1,2 +1,2 @@
 # redirection, so we can use subtree like pip
-from cvpubsubs import webcam_pub, window_sub
+from displayarray import frame_publising, subscriber_window
