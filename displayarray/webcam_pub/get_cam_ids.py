@@ -1,11 +1,11 @@
 import cv2
 
-if False:
-    from typing import List
+from typing import List
 
 
-def get_cam_ids():  # type: () -> List[int]
-    cam_list = []
+def get_cam_ids() -> List[int]:
+    """Get all cameras that OpenCV can currently detect."""
+    cam_list: List[int] = []
 
     while True:
         cam = cv2.VideoCapture(len(cam_list))

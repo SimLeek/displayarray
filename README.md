@@ -1,26 +1,26 @@
-# CVPubSubs
+# displayarray
 
 A  threaded PubSub OpenCV interfaceREADME.md. Webcam and video feeds to multiple windows is supported.
 
 ## Installation
 
-CVPubSubs is distributed on `PyPI <https://pypi.org>`_ as a universal
+displayarray is distributed on `PyPI <https://pypi.org>`_ as a universal
 wheel and is available on Linux/macOS and Windows and supports
 Python 2.7/3.5+ and PyPy.
 
-    $ pip install CVPubSubs
+    $ pip install displayarray
     
 ## Usage
 
 ### Video Editing and Publishing
 
 #### Display your webcam
-    import cvpubsubs.webcam_pub as w
+    import displayarray.webcam_pub as w
     
     w.VideoHandlerThread().display()
     
 #### Change Display Arguments
-    import cvpubsubs.webcam_pub as w
+    import displayarray.webcam_pub as w
     
     video_thread = w.VideoHandlerThread(video_source=0,
                                         callbacks = w.display_callbacks,
@@ -30,8 +30,8 @@ Python 2.7/3.5+ and PyPy.
                                         )
 
 #### handle mouse input
-    import cvpubsubs.webcam_pub as w
-    from cvpubsubs.input import mouse_loop
+    import displayarray.webcam_pub as w
+    from displayarray.input import mouse_loop
     
     @mouse_loop
     def print_mouse(mouse_event):
@@ -40,8 +40,8 @@ Python 2.7/3.5+ and PyPy.
     w.VideoHandlerThread().display()
 
 #### take in key input
-    import cvpubsubs.webcam_pub as w
-    from cvpubsubs.input import key_loop
+    import displayarray.webcam_pub as w
+    from displayarray.input import key_loop
 
     @key_loop
     def print_key_thread(key_chr):
@@ -50,7 +50,7 @@ Python 2.7/3.5+ and PyPy.
     w.VideoHandlerThread().display()
 
 #### Run your own functions on the frames
-    import cvpubsubs.webcam_pub as w
+    import displayarray.webcam_pub as w
     
     def redden_frame_print_spam(frame, cam_id):
         frame[:, :, 0] = 0
@@ -70,8 +70,8 @@ Python 2.7/3.5+ and PyPy.
     t.display()
 
 #### Display multiple windows from one source
-    import cvpubsubs.webcam_pub as w
-    from cvpubsubs.window_sub import SubscriberWindows
+    import displayarray.webcam_pub as w
+    from displayarray.window_sub import SubscriberWindows
 
     def cam_handler(frame, cam_id):
         SubscriberWindows.set_global_frame_dict(cam_id, frame, frame)
@@ -91,8 +91,8 @@ Python 2.7/3.5+ and PyPy.
     t.join()
     
 #### Display multiple windows from multiple sources
-    iport cvpubsubs.webcam_pub as w
-    from cvpubsubs.window_sub import SubscriberWindows
+    iport displayarray.webcam_pub as w
+    from displayarray.window_sub import SubscriberWindows
 
     t1 = w.VideoHandlerThread(0)
     t2 = w.VideoHandlerThread(1)
@@ -108,8 +108,8 @@ Python 2.7/3.5+ and PyPy.
     t1.join()
     
 #### Run a function on each pixel
-    from cvpubsubs.webcam_pub import VideoHandlerThread
-    from cvpubsubs.webcam_pub.callbacks import function_display_callback
+    from displayarray.webcam_pub import VideoHandlerThread
+    from displayarray.webcam_pub.callbacks import function_display_callback
     img = np.zeros((50, 50, 1))
     img[0:5, 0:5, :] = 1
 
@@ -130,7 +130,7 @@ Python 2.7/3.5+ and PyPy.
 
 ## License
 
-CVPubSubs is distributed under the terms of both
+displayarray is distributed under the terms of both
 
 - `MIT License <https://choosealicense.com/licenses/mit>`_
 - `Apache License, Version 2.0 <https://choosealicense.com/licenses/apache-2.0>`_

@@ -3,6 +3,8 @@ import cv2
 
 
 class NpCam(object):
+    """Add OpenCV camera controls to a numpy array."""
+
     def __init__(self, img):
         assert isinstance(img, np.ndarray)
         self.__img = img
@@ -23,6 +25,7 @@ class NpCam(object):
             self.__img = cv2.resize(self.__img, (self.__width, self.__height))
 
     def set(self, *args, **kwargs):
+        """Set CAP_PROP_FRAME_WIDTH or CAP_PROP_FRAME_HEIGHT to scale a numpy array to that size."""
         if args[0] in [cv2.CAP_PROP_FRAME_WIDTH, cv2.CAP_PROP_FRAME_HEIGHT]:
             self.__wait_for_ratio = not self.__wait_for_ratio
             if args[0] == cv2.CAP_PROP_FRAME_WIDTH:
@@ -34,14 +37,18 @@ class NpCam(object):
 
     @staticmethod
     def get(*args, **kwargs):
+        """Get OpenCV args. Currently only a fake CAP_PROP_FRAME_COUNT to fix detecting video ends."""
         if args[0] == cv2.CAP_PROP_FRAME_COUNT:
             return float("inf")
 
     def read(self):
-        return (True, self.__img)
+        """Read back the numpy array in standard "did it work", "the array", OpenCV format."""
+        return True, self.__img
 
     def isOpened(self):  # NOSONAR
+        """Hack to tell OpenCV we're opened until we call release."""
         return self.__is_opened
 
     def release(self):
+        """Let OpenCV know we're finished."""
         self.__is_opened = False

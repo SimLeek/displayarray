@@ -1,20 +1,15 @@
-import threading
 import unittest as ut
 
-import cvpubsubs.webcam_pub as w
-from cvpubsubs.window_sub import SubscriberWindows
-from cvpubsubs.window_sub.winctrl import WinCtrl
-from cvpubsubs import display
-from cvpubsubs.input import mouse_loop, key_loop
-import numpy as np
+import displayarray.webcam_pub as w
+from displayarray.window_sub import SubscriberWindows
+from displayarray import display
+from displayarray.input import mouse_loop, key_loop
 
-if False:
-    import numpy as np
-    from cvpubsubs.window_sub.mouse_event import MouseEvent
+import numpy as np
+from displayarray.window_sub.mouse_event import MouseEvent
 
 
 class TestSubWin(ut.TestCase):
-
     def test_mouse_loop(self):
         @mouse_loop
         def print_mouse_thread(mouse_event):
@@ -41,11 +36,9 @@ class TestSubWin(ut.TestCase):
         w.VideoHandlerThread(video_source=img, request_size=(300, -1)).display()
 
     def test_sub_with_args(self):
-        video_thread = w.VideoHandlerThread(video_source=0,
-                                            request_size=(800, 600),
-                                            high_speed=False,
-                                            fps_limit=8
-                                            )
+        video_thread = w.VideoHandlerThread(
+            video_source=0, request_size=(800, 600), high_speed=False, fps_limit=8
+        )
 
         video_thread.display()
 
@@ -67,10 +60,10 @@ class TestSubWin(ut.TestCase):
             self.assertEqual(v.exception_raised, e)
 
     def test_multi_cams_one_source(self):
-        display(0, window_names=['cammy','cammy2'], blocking=True)
+        display(0, window_names=["cammy", "cammy2"], blocking=True)
 
     def test_multi_cams_multi_source(self):
-        display(0, np.random.uniform(0.0, 1.0, (500,500)), blocking=True)
+        display(0, np.random.uniform(0.0, 1.0, (500, 500)), blocking=True)
 
     def test_nested_frames(self):
         def nest_frame(frame):
@@ -84,28 +77,33 @@ class TestSubWin(ut.TestCase):
             frame = np.asarray([[[[[[frame + 1 / 0]]]]], [[[[[frame]]], [[[frame]]]]]])
             return frame
 
-        v = w.VideoHandlerThread(callbacks=[nest_frame] + w.display_callbacks)
+        v = w.VideoHandlerThread(callbacks=[nest_frame])
         v.start()
 
         with self.assertRaises(ZeroDivisionError) as e:
-            SubscriberWindows(window_names=[str(i) for i in range(3)],
-                              video_sources=[str(0)]
-                              ).loop()
+            SubscriberWindows(
+                window_names=[str(i) for i in range(3)], video_sources=[str(0)]
+            ).loop()
             self.assertEqual(v.exception_raised, e)
 
         v.join()
 
     def test_conway_life(self):
-        from cvpubsubs.webcam_pub import VideoHandlerThread
-        from cvpubsubs.callbacks import function_display_callback
+        from displayarray.webcam_pub import VideoHandlerThread
+        from displayarray.callbacks import function_display_callback
         import numpy as np
         import cv2
+
         img = np.zeros((50, 50, 1))
         img[0:5, 0:5, :] = 1
 
         def conway(array, coords, finished):
-            neighbors = np.sum(array[max(coords[0] - 1, 0):min(coords[0] + 2, 50),
-                               max(coords[1] - 1, 0):min(coords[1] + 2, 50)])
+            neighbors = np.sum(
+                array[
+                    max(coords[0] - 1, 0) : min(coords[0] + 2, 50),
+                    max(coords[1] - 1, 0) : min(coords[1] + 2, 50),
+                ]
+            )
             neighbors = max(neighbors - np.sum(array[coords[0:2]]), 0.0)
             if array[coords] == 1.0:
                 if neighbors < 2 or neighbors > 3:
@@ -117,15 +115,26 @@ class TestSubWin(ut.TestCase):
                     array[coords] = 1.0
 
         @mouse_loop
-        def conway_add(mouse_event  # type:MouseEvent
-                       ):
+        def conway_add(
+            mouse_event  # type:MouseEvent
+        ):
             if 0 <= mouse_event.x < 50 and 0 <= mouse_event.y < 50:
                 if mouse_event.flags == cv2.EVENT_FLAG_LBUTTON:
-                    img[mouse_event.y - 5:mouse_event.y + 10, mouse_event.x - 5:mouse_event.x + 10, :] = 0.0
+                    img[
+                        mouse_event.y - 5 : mouse_event.y + 10,
+                        mouse_event.x - 5 : mouse_event.x + 10,
+                        :,
+                    ] = 0.0
                 elif mouse_event.flags == cv2.EVENT_FLAG_RBUTTON:
-                    img[mouse_event.y - 5:mouse_event.y + 10, mouse_event.x - 5:mouse_event.x + 10, :] = 1.0
+                    img[
+                        mouse_event.y - 5 : mouse_event.y + 10,
+                        mouse_event.x - 5 : mouse_event.x + 10,
+                        :,
+                    ] = 1.0
 
-        VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway)).display()
+        VideoHandlerThread(
+            video_source=img, callbacks=function_display_callback(conway)
+        ).display()
 
     def test_double_win(self):
         vid1 = np.ones((100, 100))
@@ -134,9 +143,9 @@ class TestSubWin(ut.TestCase):
         t2 = w.VideoHandlerThread(vid2)
         t1.start()
         t2.start()
-        SubscriberWindows(window_names=['cammy', 'cammy2'],
-                          video_sources=[vid1, vid2]
-                          ).loop()
+        SubscriberWindows(
+            window_names=["cammy", "cammy2"], video_sources=[vid1, vid2]
+        ).loop()
         t1.join()
         t1.join()
 
