@@ -1,6 +1,6 @@
 # displayarray
 
-## Display arrays, and any updates to those arrays
+## Display arrays while updating them
 
 ![](https://i.imgur.com/UEt6iR6.gif)
 
@@ -14,7 +14,7 @@
             arr[:] += np.random.normal(0.001, 0.0005, (100, 100, 3))
             arr %= 1.0
 
-## Get webcams and videos at 60fps, and run functions on the data:
+## Run functions on 60fps webcam or video input
 
 [![](https://thumbs.gfycat.com/AbsoluteEarnestEelelephant-size_restricted.gif)](https://gfycat.com/absoluteearnesteelelephant)
 
@@ -31,7 +31,7 @@
 
     display("fractal test.mp4", callbacks=forest_color, blocking=True, fps_limit=120)
     
-## Display tensors as they're running in tensorflow, like this denoising autoencoder:
+## Display tensors as they're running through TensorFlow or PyTorch
 
 ![](https://i.imgur.com/TejCpIP.png)
 
@@ -56,7 +56,7 @@
         output_image = autoencoder.predict(grab, steps=1)
         displayer.update((output_image[0] * 255.0).astype(np.uint8), "uid for autoencoder output")
 
-## Handle input
+## Handle input events
 
 Mouse events captured whenever the mouse moves over the window:
 
@@ -91,8 +91,8 @@ See tests for more example code. API will be generated soon.
 
 displayarray is distributed under the terms of both
 
-- `MIT License <https://choosealicense.com/licenses/mit>`_
-- `Apache License, Version 2.0 <https://choosealicense.com/licenses/apache-2.0>`_
+- [MIT License](https://choosealicense.com/licenses/mit)
+- [Apache License, Version 2.0](https://choosealicense.com/licenses/apache-2.0)
 
 at your option.
 
