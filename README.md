@@ -5,6 +5,7 @@ A library for displaying arrays as video in Python.
 ## Display arrays while updating them
 
 ![](https://i.imgur.com/UEt6iR6.gif)
+
 Source: https://www.youtube.com/watch?v=WgXQ59rg0GM
 
     from displayarray import display
