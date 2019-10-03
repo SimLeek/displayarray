@@ -6,8 +6,6 @@ A library for displaying arrays as video in Python.
 
 ![](https://i.imgur.com/UEt6iR6.gif)
 
-Source: https://www.youtube.com/watch?v=WgXQ59rg0GM
-
     from displayarray import display
     import numpy as np
 
@@ -21,6 +19,8 @@ Source: https://www.youtube.com/watch?v=WgXQ59rg0GM
 ## Run functions on 60fps webcam or video input
 
 [![](https://thumbs.gfycat.com/AbsoluteEarnestEelelephant-size_restricted.gif)](https://gfycat.com/absoluteearnesteelelephant)
+
+(Video Source: https://www.youtube.com/watch?v=WgXQ59rg0GM)
 
     from displayarray import display
     import math as m
