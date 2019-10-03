@@ -82,7 +82,7 @@ Code:
 
 ## Installation
 
-displayarray is distributed on [PyPI] (https://pypi.org) as a universal
+displayarray is distributed on [PyPI](https://pypi.org) as a universal
 wheel in Python 3.6+ and PyPy.
 
     $ pip install displayarray
