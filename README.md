@@ -1,5 +1,7 @@
 # displayarray
 
+A library for displaying arrays as video in Python.
+
 ## Display arrays while updating them
 
 ![](https://i.imgur.com/UEt6iR6.gif)
