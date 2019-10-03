@@ -46,9 +46,9 @@ class TestSubWin(ut.TestCase):
 
         def forest_color(arr):
             forest_color.i += 1
-            arr[..., 0] = (m.sin(forest_color.i * (2 * m.pi) * 4 / 360) * 255 + arr[..., 0]) % 255
-            arr[..., 1] = (m.sin((forest_color.i * (2 * m.pi) * 5 + 45) / 360) * 255 + arr[..., 1]) % 255
-            arr[..., 2] = (m.cos(forest_color.i * (2 * m.pi) * 3 / 360) * 255 + arr[..., 2]) % 255
+            arr[..., 0] = (m.sin(forest_color.i * (2 * m.pi) * .4 / 360) * 255 + arr[..., 0]) % 255
+            arr[..., 1] = (m.sin((forest_color.i * (2 * m.pi) * .5 + 45) / 360) * 255 + arr[..., 1]) % 255
+            arr[..., 2] = (m.cos(forest_color.i * (2 * m.pi) * .3 / 360) * 255 + arr[..., 2]) % 255
 
         forest_color.i = 0
 
