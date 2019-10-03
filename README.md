@@ -1,132 +1,91 @@
 # displayarray
 
-A  threaded PubSub OpenCV interfaceREADME.md. Webcam and video feeds to multiple windows is supported.
+## Display arrays, and any updates to those arrays
+
+![](https://i.imgur.com/UEt6iR6.gif)
+
+    from displayarray import display
+    import numpy as np
+
+    arr = np.random.normal(0.5, 0.1, (100, 100, 3))
+
+    with display(arr) as d:
+        while d:
+            arr[:] += np.random.normal(0.001, 0.0005, (100, 100, 3))
+            arr %= 1.0
+
+## Get webcams and videos at 60fps, and run functions on the data:
+
+[![](https://thumbs.gfycat.com/AbsoluteEarnestEelelephant-size_restricted.gif)](https://gfycat.com/absoluteearnesteelelephant)
+
+    from displayarray import display
+    import math as m
+
+    def forest_color(arr):
+        forest_color.i += 1
+        arr[..., 0] = (m.sin(forest_color.i*(2*m.pi)*4/360)*255 + arr[..., 0]) % 255
+        arr[..., 1] = (m.sin((forest_color.i * (2 * m.pi) * 5 + 45) / 360) * 255 + arr[..., 1]) % 255
+        arr[..., 2] = (m.cos(forest_color.i*(2*m.pi)*3/360)*255 + arr[..., 2]) % 255
+
+    forest_color.i = 0
+
+    display("fractal test.mp4", callbacks=forest_color, blocking=True, fps_limit=120)
+    
+## Display tensors as they're running in tensorflow, like this denoising autoencoder:
+
+![](https://i.imgur.com/TejCpIP.png)
+
+    # see test_display_tensorflow in test_simple_apy for full code.
+    
+    ...
+    
+    autoencoder.compile(loss="mse", optimizer="adam")
+
+    while displayer:
+        grab = tf.convert_to_tensor(
+            displayer.FRAME_DICT["fractal test.mp4frame"][np.newaxis, ...].astype(np.float32)
+            / 255.0
+        )
+        grab_noise = tf.convert_to_tensor(
+            (((displayer.FRAME_DICT["fractal test.mp4frame"][np.newaxis, ...].astype(
+                np.float32) + np.random.uniform(0, 255, grab.shape)) / 2) % 255)
+            / 255.0
+        )
+        displayer.update((grab_noise.numpy()[0] * 255.0).astype(np.uint8), "uid for grab noise")
+        autoencoder.fit(grab_noise, grab, steps_per_epoch=1, epochs=1)
+        output_image = autoencoder.predict(grab, steps=1)
+        displayer.update((output_image[0] * 255.0).astype(np.uint8), "uid for autoencoder output")
+
+## Handle input
+
+Mouse events captured whenever the mouse moves over the window:
+
+    event:0
+    x,y:133,387
+    flags:0
+    param:None
+
+Code:
+
+    from displayarray.input import mouse_loop
+    from displayarray import display
+    
+    @mouse_loop
+    def print_mouse_thread(mouse_event):
+        print(mouse_event)
+
+    display("fractal test.mp4", blocking=True)
 
 ## Installation
 
-displayarray is distributed on `PyPI <https://pypi.org>`_ as a universal
-wheel and is available on Linux/macOS and Windows and supports
-Python 2.7/3.5+ and PyPy.
+displayarray is distributed on [PyPI] (https://pypi.org) as a universal
+wheel in Python 3.6+ and PyPy.
 
     $ pip install displayarray
     
 ## Usage
 
-### Video Editing and Publishing
-
-#### Display your webcam
-    import displayarray.webcam_pub as w
-    
-    w.VideoHandlerThread().display()
-    
-#### Change Display Arguments
-    import displayarray.webcam_pub as w
-    
-    video_thread = w.VideoHandlerThread(video_source=0,
-                                        callbacks = w.display_callbacks,
-                                        request_size=(800, 600),
-                                        high_speed = False,
-                                        fps_limit = 8
-                                        )
-
-#### handle mouse input
-    import displayarray.webcam_pub as w
-    from displayarray.input import mouse_loop
-    
-    @mouse_loop
-    def print_mouse(mouse_event):
-        print(mouse_event)
-
-    w.VideoHandlerThread().display()
-
-#### take in key input
-    import displayarray.webcam_pub as w
-    from displayarray.input import key_loop
-
-    @key_loop
-    def print_key_thread(key_chr):
-        print("key pressed: " + str(key_chr))
-
-    w.VideoHandlerThread().display()
-
-#### Run your own functions on the frames
-    import displayarray.webcam_pub as w
-    
-    def redden_frame_print_spam(frame, cam_id):
-        frame[:, :, 0] = 0
-        frame[:, :, 1] = 0
-        print("Spam!")
-
-    w.VideoHandlerThread(callbacks=[redden_frame_print_spam] + w.display_callbacks).display()
-
-#### Display a tensor
-
-    def tensor_from_image(frame, cam_id):
-        ten = tensor_from_pytorch_or_tensorflow(frame)
-        return ten
-    
-    t = wp.VideoHandlerThread(video_source=cam, callbacks=[tensor_from_image] + wp.display_callbacks)
-
-    t.display()
-
-#### Display multiple windows from one source
-    import displayarray.webcam_pub as w
-    from displayarray.window_sub import SubscriberWindows
-
-    def cam_handler(frame, cam_id):
-        SubscriberWindows.set_global_frame_dict(cam_id, frame, frame)
-
-    t = w.VideoHandlerThread(0, [cam_handler],
-                             request_size=(1280, 720),
-                             high_speed=True,
-                             fps_limit=240
-                             )
-
-    t.start()
-
-    SubscriberWindows(window_names=['cammy', 'cammy2'],
-                      video_sources=[str(0)]
-                      ).loop()
-
-    t.join()
-    
-#### Display multiple windows from multiple sources
-    iport displayarray.webcam_pub as w
-    from displayarray.window_sub import SubscriberWindows
-
-    t1 = w.VideoHandlerThread(0)
-    t2 = w.VideoHandlerThread(1)
-
-    t1.start()
-    t2.start()
-
-    SubscriberWindows(window_names=['cammy', 'cammy2'],
-                      video_sources=[0,1]
-                      ).loop()
-
-    t1.join()
-    t1.join()
-    
-#### Run a function on each pixel
-    from displayarray.webcam_pub import VideoHandlerThread
-    from displayarray.webcam_pub.callbacks import function_display_callback
-    img = np.zeros((50, 50, 1))
-    img[0:5, 0:5, :] = 1
-
-    def conway_game_of_life(array, coords, finished):
-        neighbors = np.sum(array[max(coords[0] - 1, 0):min(coords[0] + 2, 50),
-                           max(coords[1] - 1, 0):min(coords[1] + 2, 50)])
-        neighbors = max(neighbors - np.sum(array[coords[0:2]]), 0.0)
-        if array[coords] == 1.0:
-            if neighbors < 2 or neighbors > 3:
-                array[coords] = 0.0
-            elif 2 <= neighbors <= 3:
-                array[coords] = 1.0
-        else:
-            if neighbors == 3:
-                array[coords] = 1.0
-
-    VideoHandlerThread(video_source=img, callbacks=function_display_callback(conway_game_of_life)).display()
+See tests for more example code. API will be generated soon.
 
 ## License
 

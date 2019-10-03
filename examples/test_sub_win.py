@@ -14,7 +14,7 @@ class TestSubWin(ut.TestCase):
         def print_mouse_thread(mouse_event):
             print(mouse_event)
 
-        w.VideoHandlerThread().display()
+        display("fractal test.mp4", blocking=True)
 
     def test_key_loop(self):
         @key_loop
@@ -99,8 +99,8 @@ class TestSubWin(ut.TestCase):
         def conway(array, coords, finished):
             neighbors = np.sum(
                 array[
-                    max(coords[0] - 1, 0) : min(coords[0] + 2, 50),
-                    max(coords[1] - 1, 0) : min(coords[1] + 2, 50),
+                max(coords[0] - 1, 0): min(coords[0] + 2, 50),
+                max(coords[1] - 1, 0): min(coords[1] + 2, 50),
                 ]
             )
             neighbors = max(neighbors - np.sum(array[coords[0:2]]), 0.0)
@@ -115,20 +115,20 @@ class TestSubWin(ut.TestCase):
 
         @mouse_loop
         def conway_add(
-            mouse_event  # type:MouseEvent
+                mouse_event  # type:MouseEvent
         ):
             if 0 <= mouse_event.x < 50 and 0 <= mouse_event.y < 50:
                 if mouse_event.flags == cv2.EVENT_FLAG_LBUTTON:
                     img[
-                        mouse_event.y - 5 : mouse_event.y + 10,
-                        mouse_event.x - 5 : mouse_event.x + 10,
-                        :,
+                    mouse_event.y - 5: mouse_event.y + 10,
+                    mouse_event.x - 5: mouse_event.x + 10,
+                    :,
                     ] = 0.0
                 elif mouse_event.flags == cv2.EVENT_FLAG_RBUTTON:
                     img[
-                        mouse_event.y - 5 : mouse_event.y + 10,
-                        mouse_event.x - 5 : mouse_event.x + 10,
-                        :,
+                    mouse_event.y - 5: mouse_event.y + 10,
+                    mouse_event.x - 5: mouse_event.x + 10,
+                    :,
                     ] = 1.0
 
         VideoHandlerThread(

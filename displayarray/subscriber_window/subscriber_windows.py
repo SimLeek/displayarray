@@ -13,6 +13,20 @@ from displayarray.frame_publising.frame_update_thread import FrameCallable
 from displayarray.frame_publising.frame_update_thread import VideoHandlerThread
 from displayarray.input import MouseEvent
 from displayarray.subscriber_window import window_commands
+import weakref
+
+
+class WeakMethod(weakref.WeakMethod):
+    """Pass any method to OpenCV without it keeping a reference forever."""
+
+    def __call__(self, *args, **kwargs):
+        """Call the actual method this object was made with."""
+        obj = super().__call__()
+        func = self._func_ref()
+        if obj is None or func is None:
+            return None
+        meth = self._meth_type(func, obj)
+        meth(*args, **kwargs)
 
 
 class SubscriberWindows(object):
@@ -22,10 +36,10 @@ class SubscriberWindows(object):
     ESC_KEY_CODES = [27]  # ESC key on most keyboards
 
     def __init__(
-        self,
-        window_names: Iterable[str] = ("displayarray",),
-        video_sources: Iterable[Union[str, int]] = (0,),
-        callbacks: Optional[List[Callable[[np.ndarray], Any]]] = None,
+            self,
+            window_names: Iterable[str] = ("displayarray",),
+            video_sources: Iterable[Union[str, int]] = (0,),
+            callbacks: Optional[List[Callable[[np.ndarray], Any]]] = None,
     ):
         self.source_names: List[Union[str, int]] = []
         self.close_threads: Optional[List[Thread]] = None
@@ -33,6 +47,7 @@ class SubscriberWindows(object):
         self.input_vid_global_names: List[str] = []
         self.window_names: List[str] = []
         self.input_cams: List[str] = []
+        self.exited = False
 
         if callbacks is None:
             callbacks = []
@@ -41,6 +56,12 @@ class SubscriberWindows(object):
         self.callbacks = callbacks
         for name in window_names:
             self.add_window(name)
+
+        self.update()
+
+    def __bool__(self):
+        self.update()
+        return not self.exited
 
     def add_source(self, name):
         """Add another source for this class to display."""
@@ -53,7 +74,11 @@ class SubscriberWindows(object):
         """Add another window for this class to display sources with. The name will be the title."""
         self.window_names.append(name)
         cv2.namedWindow(name + " (press ESC to quit)")
-        cv2.setMouseCallback(name + " (press ESC to quit)", self.handle_mouse)
+        m = WeakMethod(self.handle_mouse)
+        cv2.setMouseCallback(name + " (press ESC to quit)", m)
+
+    def del_window(self, name):
+        cv2.setMouseCallback(name + " (press ESC to quit)", lambda *args: None)
 
     def add_callback(self, callback):
         """Add a callback for this class to apply to videos."""
@@ -64,12 +89,13 @@ class SubscriberWindows(object):
             subscriber_dictionary.stop_cam(c)
 
     def handle_keys(
-        self, key_input  # type: int
+            self, key_input  # type: int
     ):
         """Capture key input for the escape function and passing to key control subscriber threads."""
         if key_input in self.ESC_KEY_CODES:
             for name in self.window_names:
                 cv2.destroyWindow(name + " (press ESC to quit)")
+            self.exited = True
             window_commands.quit()
             self.__stop_all_cams()
             return "quit"
@@ -96,9 +122,9 @@ class SubscriberWindows(object):
         for f in range(len(frames)):
             # detect nested:
             if (
-                isinstance(frames[f], (list, tuple))
-                or frames[f].dtype.num == 17
-                or len(frames[f].shape) > 3
+                    isinstance(frames[f], (list, tuple))
+                    or frames[f].dtype.num == 17
+                    or len(frames[f].shape) > 3
             ):
                 win_num = self._display_frames(frames[f], win_num, ids)
             else:
@@ -115,11 +141,11 @@ class SubscriberWindows(object):
         win_num = 0
         for i in range(len(self.input_vid_global_names)):
             if self.input_vid_global_names[i] in self.FRAME_DICT and not isinstance(
-                self.FRAME_DICT[self.input_vid_global_names[i]], NoData
+                    self.FRAME_DICT[self.input_vid_global_names[i]], NoData
             ):
                 if (
-                    len(self.callbacks) > 0
-                    and self.callbacks[i % len(self.callbacks)] is not None
+                        len(self.callbacks) > 0
+                        and self.callbacks[i % len(self.callbacks)] is not None
                 ):
                     self.frames = self.callbacks[i % len(self.callbacks)](
                         self.FRAME_DICT[self.input_vid_global_names[i]]
@@ -158,7 +184,17 @@ class SubscriberWindows(object):
             for t in self.close_threads:
                 t.join()
 
+    def __enter__(self):
+        return self
+
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end()
+
+    def __del__(self):
+        self.end()
+
+    def __delete__(self, instance):
+        del self.handle_mouse
         self.end()
 
     def loop(self):
@@ -174,7 +210,8 @@ class SubscriberWindows(object):
 
 
 def _get_video_callback_dict_threads(
-    *vids, callbacks: Optional[Dict[Any, FrameCallable]] = None
+        *vids, callbacks: Optional[Dict[Any, FrameCallable]] = None,
+        fps=240, size=(-1, -1)
 ):
     assert callbacks is not None
     vid_threads = []
@@ -185,39 +222,42 @@ def _get_video_callback_dict_threads(
             v_callbacks.append(callbacks[v_name])
         if v in callbacks:
             v_callbacks.append(callbacks[v])
-        vid_threads.append(VideoHandlerThread(v, callbacks=v_callbacks))
+        vid_threads.append(VideoHandlerThread(v, callbacks=v_callbacks, fps_limit=fps, request_size=size))
     return vid_threads
 
 
 def _get_video_threads(
-    *vids,
-    callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
-    ] = None
+        *vids,
+        callbacks: Optional[
+            Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
+        ] = None,
+        fps=240, size=(-1, -1)
 ):
     vid_threads: List[Thread] = []
     if isinstance(callbacks, Dict):
-        vid_threads = _get_video_callback_dict_threads(*vids, callbacks=callbacks)
+        vid_threads = _get_video_callback_dict_threads(*vids, callbacks=callbacks, fps=fps, size=size)
     elif isinstance(callbacks, List):
         for v in vids:
-            vid_threads.append(VideoHandlerThread(v, callbacks=callbacks))
+            vid_threads.append(VideoHandlerThread(v, callbacks=callbacks, fps_limit=fps, request_size=size))
     elif callable(callbacks):
         for v in vids:
-            vid_threads.append(VideoHandlerThread(v, callbacks=[callbacks]))
+            vid_threads.append(VideoHandlerThread(v, callbacks=[callbacks], fps_limit=fps, request_size=size))
     else:
         for v in vids:
             if v is not None:
-                vid_threads.append(VideoHandlerThread(v))
+                vid_threads.append(VideoHandlerThread(v, fps_limit=fps, request_size=size))
     return vid_threads
 
 
 def display(
-    *vids,
-    callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
-    ] = None,
-    window_names=None,
-    blocking=False
+        *vids,
+        callbacks: Optional[
+            Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
+        ] = None,
+        window_names=None,
+        blocking=False,
+        fps_limit=240,
+        size=(-1, -1)
 ):
     """
     Display all the arrays, cameras, and videos passed in.
@@ -226,20 +266,16 @@ def display(
      data before displaying.
     Window names end up becoming the title of the windows
     """
-    vid_threads = _get_video_threads(*vids, callbacks=callbacks)
+    vid_threads = _get_video_threads(*vids, callbacks=callbacks, fps=fps_limit, size=size)
     for v in vid_threads:
         v.start()
     if window_names is None:
         window_names = ["window {}".format(i) for i in range(len(vids))]
     if blocking:
         SubscriberWindows(window_names=window_names, video_sources=vids).loop()
-        for v in vid_threads:
-            v.join()
+        for vt in vid_threads:
+            vt.join()
     else:
         s = SubscriberWindows(window_names=window_names, video_sources=vids)
         s.close_threads = vid_threads
-        v_names = []
-        for v in vids:
-            v_name = uid_for_source(v)
-            v_names.append(v_name)
-        return s, v_names
+        return s

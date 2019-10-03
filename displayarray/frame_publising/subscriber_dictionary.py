@@ -42,8 +42,10 @@ def register_cam(cam_id):
 
 def stop_cam(cam_id: Union[int, str]):
     """Tell camera "cam_id" to end it's main loop."""
-    CV_CAMS_DICT[str(cam_id)].cmd_pub.publish("quit", blocking=True)
-    CV_CAM_HANDLERS_DICT[str(cam_id)].cmd_pub.publish("quit", blocking=True)
+    if str(cam_id) in CV_CAMS_DICT:
+        CV_CAMS_DICT[str(cam_id)].cmd_pub.publish("quit", blocking=True)
+    if str(cam_id) in CV_CAM_HANDLERS_DICT:
+        CV_CAM_HANDLERS_DICT[str(cam_id)].cmd_pub.publish("quit", blocking=True)
 
 
 def cam_cmd_sub(cam_id, blocking=True):

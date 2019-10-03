@@ -19,7 +19,7 @@ class VideoHandlerThread(threading.Thread):
         self,
         video_source: Union[int, str, np.ndarray] = 0,
         callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
-        request_size: Tuple[int, int] = (99999, 99999),
+        request_size: Tuple[int, int] = (-1, -1),
         high_speed: bool = True,
         fps_limit: float = 240,
     ):
