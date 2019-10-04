@@ -47,10 +47,6 @@ class VideoHandlerThread(threading.Thread):
             for c in self.callbacks:
                 try:
                     frame_c = c(frame)
-                except TypeError as te:
-                    raise TypeError(
-                        "Callback functions for cvpubsub need to accept two arguments: array and uid"
-                    )
                 except Exception as e:
                     self.exception_raised = e
                     frame = frame_c = self.exception_raised
