@@ -141,90 +141,31 @@ class TestSubWin(ut.TestCase):
 
         p_new = np.array((y_new, x_new)).astype(np.uint32)
 
-        arr[p[0], p[1], :] = np.swapaxes(arr[p_new[0], p_new[1], :], 0, 1)
-        display(arr, blocking=True)
+        brr = arr.copy()
+        brr[p[0], p[1], :] = np.swapaxes(arr[p_new[0], p_new[1], :], 0, 1)
+        display(brr, blocking=True)
 
-    def test_display_lens(self):
+        crr = np.zeros_like(arr)
+        crr[p_new[0], p_new[1], :] = np.swapaxes(arr[p[0], p[1], :], 0, 1)
+        display(crr, blocking=True)
+
+    def test_display_mustache_lens(self):
+        from displayarray.effects import lens
         from displayarray import display
-        from displayarray.input import mouse_loop
-        import numpy as np
-        import cv2
-        import skimage.measure
-        import skimage.transform
+        m = lens.Mustache()
+        m.enable_mouse_control()
+        display("fractal test.mp4", callbacks=m, blocking=True)
 
-        def lens(arr):
-            center = lens.center
-            zoom = lens.zoom
-            zoom_out = 1.0 / zoom[0]
-            if not isinstance(lens.bleed[0], np.ndarray):
-                lens.bleed[0] = np.zeros_like(arr)
+    def test_display_barrel_lens(self):
+        from displayarray.effects import lens
+        from displayarray import display
+        m = lens.Barrel(use_bleed=False)
+        m.enable_mouse_control()
+        display("fractal test.mp4", callbacks=m, blocking=True)
 
-            y = np.arange(arr.shape[0])
-            x = np.arange(arr.shape[1])
-            y_ = (y - arr.shape[0] / 2.0) * zoom_out / arr.shape[0]
-            x_ = (x - arr.shape[1] / 2.0) * zoom_out / arr.shape[1]
-            p = np.array(np.meshgrid(x_, y_))
-
-            y2_ = (y - center[0]) * zoom_out / arr.shape[0]
-            x2_ = (x - center[1]) * zoom_out / arr.shape[1]
-            p2 = np.array(np.meshgrid(x2_, y2_))
-
-            barrel_power = lens.power[0]
-
-            theta = np.arctan2(p2[1], p2[0])
-
-            radius = np.linalg.norm(p2, axis=0)
-
-            radius = pow(radius, barrel_power)
-
-            x_new = 0.5 * (radius * np.cos(theta) + 1)
-            x_new = np.clip(x_new * len(x), 0, len(x) - 1)
-
-            y_new = 0.5 * (radius * np.sin(theta) + 1)
-            y_new = np.clip(y_new * len(y), 0, len(y) - 1)
-
-            p = np.array(np.meshgrid(y, x)).astype(np.uint32)
-
-            p_new = np.array((y_new, x_new)).astype(np.uint32)
-
-            # arr[p[0], p[1], :] = np.swapaxes(arr[p_new[0], p_new[1], :], 0, 1)
-            arr2 = lens.bleed[0].copy()
-            arr2[y,...] = (arr2[y,...] + arr2[(y+1)%len(y), ...])/2
-            arr2[y, ...] = (arr2[y, ...] + arr2[(y - 1) % len(y), ...]) / 2
-            arr2[:,x, ...] = (arr2[:,x, ...] + arr2[:, (x + 1) % len(x), ...]) / 2
-            arr2[:,x, ...] = (arr2[:,x, ...] + arr2[:, (x - 1) % len(x), ...]) / 2
-            #arr2 = np.zeros_like(arr)
-            arr2[p_new[0], p_new[1], :] = np.swapaxes(arr[p[0], p[1], :], 0, 1)
-            #lens.bleed[0][p_new[0], p_new[1], :] = np.swapaxes(arr[p[0], p[1], :], 0, 1)
-            #avg = skimage.measure.block_reduce(arr2, (2,2, 1), np.min)
-            #avg2 = skimage.transform.resize(avg, (arr2.shape))
-            lens.bleed[0]=arr2
-            #lens.bleed
-
-            return arr2
-
-        lens.center = [250, 250]
-        lens.zoom = [.5]
-        lens.power = [1.0]
-        lens.bleed = [None]
-
-        @mouse_loop
-        def m_loop(me):
-            m_loop.center[:] = [me.y, me.x]
-            if me.event == cv2.EVENT_MOUSEWHEEL:
-                if me.flags & cv2.EVENT_FLAG_CTRLKEY:
-                    if me.flags > 0:
-                        m_loop.zoom[0] *= 1.1
-                    else:
-                        m_loop.zoom[0] /= 1.1
-                else:
-                    if me.flags > 0:
-                        m_loop.power[0] *= 1.1
-                    else:
-                        m_loop.power[0] /= 1.1
-
-        m_loop.center = lens.center
-        m_loop.zoom = lens.zoom
-        m_loop.power = lens.power
-
-        display("fractal test.mp4", callbacks=lens, blocking=True)
+    def test_crop(self):
+        from displayarray.effects import crop
+        from displayarray import display
+        m = crop.Crop()
+        m.enable_mouse_control()
+        display("fractal test.mp4", callbacks=m, blocking=True)
