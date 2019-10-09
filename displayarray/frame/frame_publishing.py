@@ -4,7 +4,7 @@ import time
 import cv2
 import numpy as np
 
-from displayarray.frame_publising import subscriber_dictionary
+from displayarray.frame import subscriber_dictionary
 from .np_to_opencv import NpCam
 from displayarray.uid import uid_for_source
 
@@ -12,10 +12,10 @@ from typing import Union, Tuple
 
 
 def pub_cam_loop(
-    cam_id: Union[int, str],
-    request_size: Tuple[int, int] = (1280, 720),
-    high_speed: bool = False,
-    fps_limit: float = 240,
+        cam_id: Union[int, str],
+        request_size: Tuple[int, int] = (1280, 720),
+        high_speed: bool = False,
+        fps_limit: float = 240,
 ) -> bool:
     """
     Publish whichever camera you select to CVCams.<cam_id>.Vid.
@@ -81,10 +81,10 @@ def pub_cam_loop(
 
 
 def pub_cam_thread(
-    cam_id: Union[int, str],
-    request_ize: Tuple[int, int] = (1280, 720),
-    high_speed: bool = False,
-    fps_limit: float = 240,
+        cam_id: Union[int, str],
+        request_ize: Tuple[int, int] = (1280, 720),
+        high_speed: bool = False,
+        fps_limit: float = 240,
 ) -> threading.Thread:
     """Run pub_cam_loop in a new thread."""
     t = threading.Thread(

@@ -8,11 +8,11 @@ from localpubsub import NoData
 
 from displayarray.callbacks import global_cv_display_callback
 from displayarray.uid import uid_for_source
-from displayarray.frame_publising import subscriber_dictionary
-from displayarray.frame_publising.frame_update_thread import FrameCallable
-from displayarray.frame_publising.frame_update_thread import VideoHandlerThread
+from displayarray.frame import subscriber_dictionary
+from displayarray.frame.frame_update_thread import FrameCallable
+from displayarray.frame.frame_update_thread import VideoHandlerThread
 from displayarray.input import MouseEvent
-from displayarray.subscriber_window import window_commands
+from displayarray.window import window_commands
 import weakref
 
 
@@ -63,12 +63,18 @@ class SubscriberWindows(object):
         self.update()
         return not self.exited
 
+    def block(self):
+        self.loop()
+        for ct in self.close_threads:
+            ct.join()
+
     def add_source(self, name):
         """Add another source for this class to display."""
         uid = uid_for_source(name)
         self.source_names.append(uid)
         self.input_vid_global_names.append(uid + "frame")
         self.input_cams.append(name)
+        return self
 
     def add_window(self, name):
         """Add another window for this class to display sources with. The name will be the title."""
@@ -76,6 +82,7 @@ class SubscriberWindows(object):
         cv2.namedWindow(name + " (press ESC to quit)")
         m = WeakMethod(self.handle_mouse)
         cv2.setMouseCallback(name + " (press ESC to quit)", m)
+        return self
 
     def del_window(self, name):
         cv2.setMouseCallback(name + " (press ESC to quit)", lambda *args: None)
@@ -83,6 +90,7 @@ class SubscriberWindows(object):
     def add_callback(self, callback):
         """Add a callback for this class to apply to videos."""
         self.callbacks.append(callback)
+        return self
 
     def __stop_all_cams(self):
         for c in self.source_names:
@@ -143,17 +151,15 @@ class SubscriberWindows(object):
             if self.input_vid_global_names[i] in self.FRAME_DICT and not isinstance(
                     self.FRAME_DICT[self.input_vid_global_names[i]], NoData
             ):
-                if (
-                        len(self.callbacks) > 0
-                        and self.callbacks[i % len(self.callbacks)] is not None
-                ):
-                    self.frames = self.callbacks[i % len(self.callbacks)](
-                        self.FRAME_DICT[self.input_vid_global_names[i]]
-                    )
-                else:
-                    self.frames = self.FRAME_DICT[self.input_vid_global_names[i]]
+                self.frames = self.FRAME_DICT[self.input_vid_global_names[i]]
                 if isinstance(self.frames, np.ndarray) and len(self.frames.shape) <= 3:
                     self.frames = [self.frames]
+                if len(self.callbacks) > 0:
+                    for c in self.callbacks:
+                        for f in range(len(self.frames)):
+                            frame = c(self.frames[f])
+                            if frame is not None:
+                                self.frames[f] = frame
                 win_num = self._display_frames(self.frames, win_num)
 
     def update(self, arr=None, id=None):
@@ -175,6 +181,7 @@ class SubscriberWindows(object):
         key = ""
         while msg_cmd != "quit" and key != "quit" and len(self.frames) == 0:
             msg_cmd, key = self.update()
+        return self
 
     def end(self):
         """Close all threads. Should be used with non-blocking mode."""
@@ -279,3 +286,7 @@ def display(
         s = SubscriberWindows(window_names=window_names, video_sources=vids)
         s.close_threads = vid_threads
         return s
+
+
+def breakpoint_display(*args, **kwargs):
+    return display(*args, **kwargs, blocking=True)

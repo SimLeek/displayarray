@@ -4,8 +4,12 @@ from displayarray import display
 
 def mandel(height=240, width=320, itermax=255, y_min=-1.8, y_max=.6, x_min=-1.6, x_max=1.6):
     """
+    Generate a view of the mandlebrot fractal
+
+    source: https://thesamovar.wordpress.com/2009/03/22/fast-fractals-with-python-and-numpy/
+
     >>> img = mandel()
-    >>> center = (0, -np.pi/2)
+    >>> center = (0, -1.78)
     >>> length = 3.2
     >>> d = display(img)
     >>> while d:
@@ -15,15 +19,6 @@ def mandel(height=240, width=320, itermax=255, y_min=-1.8, y_max=.6, x_min=-1.6,
     ...   x_min = center[0]-length/2.0
     ...   x_max = center[0]+length/2.0
     ...   img[...] = mandel(y_min=y_min, y_max=y_max, x_min=x_min, x_max=x_max)
-
-    :param height:
-    :param width:
-    :param itermax:
-    :param y_min:
-    :param y_max:
-    :param x_min:
-    :param x_max:
-    :return:
     """
 
     ix, iy = np.mgrid[0:height, 0:width]
@@ -39,7 +34,7 @@ def mandel(height=240, width=320, itermax=255, y_min=-1.8, y_max=.6, x_min=-1.6,
             break
         z = z * z
         z = z + c
-        rem = abs(z) > 2.0
+        rem = abs(z) > 4.0
         img[ix[rem], iy[rem]] = i + 1
         rem = ~rem
         z = z[rem]

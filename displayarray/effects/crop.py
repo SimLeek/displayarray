@@ -1,9 +1,10 @@
 import numpy as np
 from ..input import mouse_loop
-import cv2
 
 
 class Crop(object):
+    """A callback class that will return the input array cropped to the output size. N-dimensional."""
+
     def __init__(self, output_size=(64, 64, 3), center=None):
         self.output_size = output_size
         self.center = center
@@ -12,6 +13,7 @@ class Crop(object):
         self.input_size = None
 
     def __call__(self, arr):
+        """Crop the input array to the specified output size. output is centered on self.center point on input."""
         if self.center is None:
             self.input_size = arr.shape
             self.center = [int(arr.shape[x]) // 2 for x in range(arr.ndim)]
@@ -35,6 +37,8 @@ class Crop(object):
         return out_array.astype(arr.dtype)
 
     def enable_mouse_control(self):
+        """Move the mouse to move where the crop is from on the original image"""
+
         @mouse_loop
         def m_loop(me):
             if self.center is None:
@@ -44,3 +48,4 @@ class Crop(object):
                               1]
 
         self.mouse_control = m_loop
+        return self

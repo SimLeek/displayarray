@@ -5,9 +5,9 @@ import numpy as np
 
 from displayarray.callbacks import global_cv_display_callback
 from displayarray.uid import uid_for_source
-from displayarray.frame_publising import subscriber_dictionary
-from displayarray.frame_publising.frame_publishing import pub_cam_thread
-from displayarray.subscriber_window import window_commands
+from displayarray.frame import subscriber_dictionary
+from displayarray.frame.frame_publishing import pub_cam_thread
+from displayarray.window import window_commands
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
@@ -85,7 +85,7 @@ class VideoHandlerThread(threading.Thread):
 
         :param callbacks: List of callbacks to be run on frames before displaying to the screen.
         """
-        from displayarray.subscriber_window import SubscriberWindows
+        from displayarray.window import SubscriberWindows
 
         if callbacks is None:
             callbacks = []

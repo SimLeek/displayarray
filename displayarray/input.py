@@ -1,4 +1,4 @@
-from displayarray.subscriber_window import window_commands
+from displayarray.window import window_commands
 import threading
 import time
 

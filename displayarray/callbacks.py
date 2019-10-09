@@ -1,4 +1,4 @@
-from displayarray.subscriber_window import window_commands
+from displayarray.window import window_commands
 import numpy as np
 
 from typing import Union
@@ -13,7 +13,7 @@ def global_cv_display_callback(frame: np.ndarray, cam_id: Union[int, str]):
     :param cam_id: The video or image source
     :type cam_id: Union[int, str]
     """
-    from displayarray.subscriber_window import SubscriberWindows
+    from displayarray.window import SubscriberWindows
 
     SubscriberWindows.FRAME_DICT[str(cam_id) + "frame"] = frame
 
@@ -23,7 +23,7 @@ class function_display_callback(object):  # NOSONAR
     Used for running arbitrary functions on pixels.
 
     >>> import random
-    >>> from displayarray.webcam_pub import VideoHandlerThread
+    >>> from displayarray.frame import VideoHandlerThread
     >>> img = np.zeros((300, 300, 3))
     >>> def fun(array, coords, finished):
     ...     r,g,b = random.random()/20.0, random.random()/20.0, random.random()/20.0
