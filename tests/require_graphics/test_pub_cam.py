@@ -1,4 +1,4 @@
-import displayarray.frame_publising as w
+import displayarray.frame as w
 import unittest as ut
 
 

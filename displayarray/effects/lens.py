@@ -1,9 +1,6 @@
 import numpy as np
 from ..input import mouse_loop
 import cv2
-from ..util.simple_unique_count import uniquecount
-
-
 
 
 class ControllableLens(object):
@@ -35,6 +32,10 @@ class Barrel(ControllableLens):
         self.mouse_control = None
 
     def enable_mouse_control(self):
+        """
+        Move the mouse to center the image, scroll to increase/decrease barrel, ctrl+scroll to increase/decrease zoom
+        """
+
         @mouse_loop
         def m_loop(me):
             self.center[:] = [me.y, me.x]
@@ -51,6 +52,7 @@ class Barrel(ControllableLens):
                         self.barrel_power /= 1.1
 
         self.mouse_control = m_loop
+        return self
 
     def __call__(self, arr):
         zoom_out = 1.0 / self.zoom
