@@ -13,7 +13,7 @@ class TestFrameHandler(ut.TestCase):
                 print(frame.shape)
             self.i += 1
 
-        w.VideoHandlerThread(
+        w.FrameUpdater(
             0,
             [test_frame_handler],
             request_size=(1280, 720),

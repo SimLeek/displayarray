@@ -10,11 +10,10 @@ from displayarray.uid import uid_for_source
 
 from typing import Union, Tuple
 
-
 def pub_cam_loop(
-        cam_id: Union[int, str],
-        request_size: Tuple[int, int] = (1280, 720),
-        high_speed: bool = False,
+        cam_id: Union[int, str, np.ndarray],
+        request_size: Tuple[int, int] = (-1, -1),
+        high_speed: bool = True,
         fps_limit: float = 240,
 ) -> bool:
     """
@@ -82,11 +81,11 @@ def pub_cam_loop(
 
 def pub_cam_thread(
         cam_id: Union[int, str],
-        request_ize: Tuple[int, int] = (1280, 720),
-        high_speed: bool = False,
+        request_ize: Tuple[int, int] = (-1, -1),
+        high_speed: bool = True,
         fps_limit: float = 240,
 ) -> threading.Thread:
-    """Run pub_cam_loop in a new thread."""
+    """Run pub_cam_loop in a new thread. Starts on creation."""
     t = threading.Thread(
         target=pub_cam_loop, args=(cam_id, request_ize, high_speed, fps_limit)
     )
