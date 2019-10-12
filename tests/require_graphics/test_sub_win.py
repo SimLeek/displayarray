@@ -21,21 +21,21 @@ class TestSubWin(ut.TestCase):
         def print_key_thread(key_chr):
             print("key pressed: " + str(key_chr))
 
-        w.VideoHandlerThread().display()
+        w.FrameUpdater().display()
 
     def test_sub(self):
-        w.VideoHandlerThread().display()
+        w.FrameUpdater().display()
 
     def test_image(self):
         img = np.random.uniform(0, 1, (300, 300, 3))
-        w.VideoHandlerThread(video_source=img).display()
+        w.FrameUpdater(video_source=img).display()
 
     def test_image_args(self):
         img = np.random.uniform(0, 1, (30, 30, 3))
-        w.VideoHandlerThread(video_source=img, request_size=(300, -1)).display()
+        w.FrameUpdater(video_source=img, request_size=(300, -1)).display()
 
     def test_sub_with_args(self):
-        video_thread = w.VideoHandlerThread(
+        video_thread = w.FrameUpdater(
             video_source=0, request_size=(800, 600), high_speed=False, fps_limit=8
         )
 
@@ -46,7 +46,7 @@ class TestSubWin(ut.TestCase):
             frame[:, :, 0] = 0
             frame[:, :, 2] = 0
 
-        w.VideoHandlerThread(callbacks=redden_frame_print_spam).display()
+        w.FrameUpdater(callbacks=redden_frame_print_spam).display()
 
     def test_sub_with_callback_exception(self):
         def redden_frame_print_spam(frame):
@@ -54,7 +54,7 @@ class TestSubWin(ut.TestCase):
             frame[:, :, 2] = 1 / 0
 
         with self.assertRaises(ZeroDivisionError) as e:
-            v = w.VideoHandlerThread(callbacks=redden_frame_print_spam)
+            v = w.FrameUpdater(callbacks=redden_frame_print_spam)
             v.display()
             self.assertEqual(v.exception_raised, e)
 
@@ -76,7 +76,7 @@ class TestSubWin(ut.TestCase):
             frame = np.asarray([[[[[[frame + 1 / 0]]]]], [[[[[frame]]], [[[frame]]]]]])
             return frame
 
-        v = w.VideoHandlerThread(callbacks=[nest_frame])
+        v = w.FrameUpdater(callbacks=[nest_frame])
         v.start()
 
         with self.assertRaises(ZeroDivisionError) as e:
@@ -88,7 +88,7 @@ class TestSubWin(ut.TestCase):
         v.join()
 
     def test_conway_life(self):
-        from displayarray.frame import VideoHandlerThread
+        from displayarray.frame import FrameUpdater
         from displayarray.callbacks import function_display_callback
         import numpy as np
         import cv2
@@ -131,15 +131,15 @@ class TestSubWin(ut.TestCase):
                     :,
                     ] = 1.0
 
-        VideoHandlerThread(
+        FrameUpdater(
             video_source=img, callbacks=function_display_callback(conway)
         ).display()
 
     def test_double_win(self):
         vid1 = np.ones((100, 100))
         vid2 = np.zeros((100, 100))
-        t1 = w.VideoHandlerThread(vid1)
-        t2 = w.VideoHandlerThread(vid2)
+        t1 = w.FrameUpdater(vid1)
+        t2 = w.FrameUpdater(vid2)
         t1.start()
         t2.start()
         SubscriberWindows(

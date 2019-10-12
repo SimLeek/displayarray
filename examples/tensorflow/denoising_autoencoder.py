@@ -39,3 +39,9 @@ while displayer:
     autoencoder.fit(grab_noise, grab, steps_per_epoch=1, epochs=1)
     output_image = autoencoder.predict(grab, steps=1)
     displayer.update((output_image[0] * 255.0).astype(np.uint8), "uid for autoencoder output")
+
+    get_3rd_layer_output = tf.keras.backend.function([autoencoder.layers[0].input],
+                                                     [autoencoder.layers[1].output])
+    layer_output = get_3rd_layer_output([grab_noise])[0]
+
+    displayer.update(layer_output[0], "conv 1")

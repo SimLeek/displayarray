@@ -8,22 +8,23 @@ from displayarray.uid import uid_for_source
 from displayarray.frame import subscriber_dictionary
 from displayarray.frame.frame_publishing import pub_cam_thread
 from displayarray.window import window_commands
+from ..effects.select_channels import SelectChannels
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
 
-class VideoHandlerThread(threading.Thread):
-    """Thread for publishing frames from a video source."""
+class FrameUpdater(threading.Thread):
+    """Thread for updating frames from a video source."""
 
     def __init__(
-        self,
-        video_source: Union[int, str, np.ndarray] = 0,
-        callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
-        request_size: Tuple[int, int] = (-1, -1),
-        high_speed: bool = True,
-        fps_limit: float = 240,
+            self,
+            video_source: Union[int, str, np.ndarray] = 0,
+            callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
+            request_size: Tuple[int, int] = (-1, -1),
+            high_speed: bool = True,
+            fps_limit: float = 240,
     ):
-        super(VideoHandlerThread, self).__init__(target=self.loop, args=())
+        super(FrameUpdater, self).__init__(target=self.loop, args=())
         self.cam_id = uid_for_source(video_source)
         self.video_source = video_source
         if callbacks is None:
@@ -43,20 +44,27 @@ class VideoHandlerThread(threading.Thread):
 
     def __apply_callbacks_to_frame(self, frame):
         if frame is not None:
-            frame_c = None
-            for c in self.callbacks:
-                try:
-                    frame_c = c(frame)
-                except Exception as e:
-                    self.exception_raised = e
-                    frame = frame_c = self.exception_raised
-                    subscriber_dictionary.stop_cam(self.cam_id)
-                    window_commands.quit()
-                    raise e
-            if frame_c is not None:
-                global_cv_display_callback(frame_c, self.cam_id)
-            else:
-                global_cv_display_callback(frame, self.cam_id)
+            try:
+                for c in self.callbacks:
+                    frame = c(frame)
+                if frame.shape[-1] not in [1, 3] and len(frame.shape) != 2:
+                    print(f"Too many channels in output. (Got {frame.shape[-1]} instead of 1 or 3.) "
+                          f"Frame selection callback added.")
+                    print("Ctrl+scroll to change first channel.\n"
+                          "Shift+scroll to change second channel.\n"
+                          "Alt+scroll to change third channel.")
+                    sel = SelectChannels()
+                    sel.enable_mouse_control()
+                    sel.mouse_print_channels = True
+                    self.callbacks.append(sel)
+                    frame = self.callbacks[-1](frame)
+            except Exception as e:
+                self.exception_raised = e
+                frame = self.exception_raised
+                subscriber_dictionary.stop_cam(self.cam_id)
+                window_commands.quit()
+                raise e
+            global_cv_display_callback(frame, self.cam_id)
 
     def loop(self):
         """Continually get frames from the video publisher, run callbacks on them, and listen to commands."""

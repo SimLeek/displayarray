@@ -9,24 +9,12 @@ from localpubsub import NoData
 from displayarray.callbacks import global_cv_display_callback
 from displayarray.uid import uid_for_source
 from displayarray.frame import subscriber_dictionary
-from displayarray.frame.frame_update_thread import FrameCallable
-from displayarray.frame.frame_update_thread import VideoHandlerThread
+from displayarray.frame.frame_updater import FrameCallable
+from displayarray.frame.frame_updater import FrameUpdater
 from displayarray.input import MouseEvent
 from displayarray.window import window_commands
-import weakref
-
-
-class WeakMethod(weakref.WeakMethod):
-    """Pass any method to OpenCV without it keeping a reference forever."""
-
-    def __call__(self, *args, **kwargs):
-        """Call the actual method this object was made with."""
-        obj = super().__call__()
-        func = self._func_ref()
-        if obj is None or func is None:
-            return None
-        meth = self._meth_type(func, obj)
-        meth(*args, **kwargs)
+from ..util import WeakMethod
+from ..effects.select_channels import SelectChannels
 
 
 class SubscriberWindows(object):
@@ -160,6 +148,20 @@ class SubscriberWindows(object):
                             frame = c(self.frames[f])
                             if frame is not None:
                                 self.frames[f] = frame
+                for f in range(len(self.frames)):
+                    if self.frames[f].shape[-1] not in [1, 3] and len(self.frames[f].shape) != 2:
+                        print(f"Too many channels in output. (Got {self.frames[f].shape[-1]} instead of 1 or 3.) "
+                              f"Frame selection callback added.")
+                        print("Ctrl+scroll to change first channel.\n"
+                              "Shift+scroll to change second channel.\n"
+                              "Alt+scroll to change third channel.")
+                        sel = SelectChannels()
+                        sel.enable_mouse_control()
+                        sel.mouse_print_channels = True
+                        self.callbacks.append(sel)
+                        for fr in range(len(self.frames)):
+                            self.frames[fr] = self.callbacks[-1](self.frames[fr])
+                        break
                 win_num = self._display_frames(self.frames, win_num)
 
     def update(self, arr=None, id=None):
@@ -229,7 +231,7 @@ def _get_video_callback_dict_threads(
             v_callbacks.append(callbacks[v_name])
         if v in callbacks:
             v_callbacks.append(callbacks[v])
-        vid_threads.append(VideoHandlerThread(v, callbacks=v_callbacks, fps_limit=fps, request_size=size))
+        vid_threads.append(FrameUpdater(v, callbacks=v_callbacks, fps_limit=fps, request_size=size))
     return vid_threads
 
 
@@ -245,14 +247,14 @@ def _get_video_threads(
         vid_threads = _get_video_callback_dict_threads(*vids, callbacks=callbacks, fps=fps, size=size)
     elif isinstance(callbacks, List):
         for v in vids:
-            vid_threads.append(VideoHandlerThread(v, callbacks=callbacks, fps_limit=fps, request_size=size))
+            vid_threads.append(FrameUpdater(v, callbacks=callbacks, fps_limit=fps, request_size=size))
     elif callable(callbacks):
         for v in vids:
-            vid_threads.append(VideoHandlerThread(v, callbacks=[callbacks], fps_limit=fps, request_size=size))
+            vid_threads.append(FrameUpdater(v, callbacks=[callbacks], fps_limit=fps, request_size=size))
     else:
         for v in vids:
             if v is not None:
-                vid_threads.append(VideoHandlerThread(v, fps_limit=fps, request_size=size))
+                vid_threads.append(FrameUpdater(v, fps_limit=fps, request_size=size))
     return vid_threads
 
 
