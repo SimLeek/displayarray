@@ -30,7 +30,7 @@ class SubscriberWindows(object):
             callbacks: Optional[List[Callable[[np.ndarray], Any]]] = None,
     ):
         self.source_names: List[Union[str, int]] = []
-        self.close_threads: Optional[List[Thread]] = None
+        self.close_threads: Optional[List[Thread]] = []
         self.frames: List[np.ndarray] = []
         self.input_vid_global_names: List[str] = []
         self.window_names: List[str] = []
@@ -60,7 +60,7 @@ class SubscriberWindows(object):
         """Add another source for this class to display."""
         uid = uid_for_source(name)
         self.source_names.append(uid)
-        self.input_vid_global_names.append(uid + "frame")
+        self.input_vid_global_names.append(uid)
         self.input_cams.append(name)
         return self
 
@@ -71,9 +71,6 @@ class SubscriberWindows(object):
         m = WeakMethod(self.handle_mouse)
         cv2.setMouseCallback(name + " (press ESC to quit)", m)
         return self
-
-    def del_window(self, name):
-        cv2.setMouseCallback(name + " (press ESC to quit)", lambda *args: None)
 
     def add_callback(self, callback):
         """Add a callback for this class to apply to videos."""
@@ -100,11 +97,7 @@ class SubscriberWindows(object):
                 window_commands.key_pub.publish(chr(key_input))
             except ValueError:
                 warnings.warn(
-                    RuntimeWarning(
-                        "Unknown key code: [{}]. Please report to cv_pubsubs issue page.".format(
-                            key_input
-                        )
-                    )
+                    RuntimeWarning(f"Unknown key code: [{key_input}]. Please report to the displayarray issue page.")
                 )
 
     def handle_mouse(self, event, x, y, flags, param):
@@ -112,7 +105,7 @@ class SubscriberWindows(object):
         mousey = MouseEvent(event, x, y, flags, param)
         window_commands.mouse_pub.publish(mousey)
 
-    def _display_frames(self, frames, win_num, ids=None):
+    def _display_frames(self, frames, win_num=0, ids=None):
         if isinstance(frames, Exception):
             raise frames
         for f in range(len(frames)):
@@ -120,51 +113,57 @@ class SubscriberWindows(object):
             if (
                     isinstance(frames[f], (list, tuple))
                     or frames[f].dtype.num == 17
-                    or len(frames[f].shape) > 3
+                    or (len(frames[f].shape) != 2 and (len(frames[f].shape) != 3 or frames[f].shape[-1] != 3))
             ):
                 win_num = self._display_frames(frames[f], win_num, ids)
             else:
+                if len(self.window_names) <= win_num:
+                    self.add_window(str(win_num))
                 cv2.imshow(
-                    self.window_names[win_num % len(self.window_names)]
+                    self.window_names[win_num]
                     + " (press ESC to quit)",
                     frames[f],
                 )
                 win_num += 1
         return win_num
 
+    def __check_too_many_channels(self):
+        for f in range(len(self.frames)):
+            if isinstance(self.frames[f], Exception):
+                raise self.frames[f]
+            if self.frames[f].shape[-1] not in [1, 3] and len(self.frames[f].shape) != 2:
+                print(f"Too many channels in output. (Got {self.frames[f].shape[-1]} instead of 1 or 3.) "
+                      f"Frame selection callback added.")
+                print("Ctrl+scroll to change first channel.\n"
+                      "Shift+scroll to change second channel.\n"
+                      "Alt+scroll to change third channel.")
+                sel = SelectChannels()
+                sel.enable_mouse_control()
+                sel.mouse_print_channels = True
+                self.callbacks.append(sel)
+                for fr in range(len(self.frames)):
+                    self.frames[fr] = self.callbacks[-1](self.frames[fr])
+                break
+
     def update_window_frames(self):
         """Update the windows with the newest data for all frames."""
-        win_num = 0
+        self.frames = []
         for i in range(len(self.input_vid_global_names)):
             if self.input_vid_global_names[i] in self.FRAME_DICT and not isinstance(
                     self.FRAME_DICT[self.input_vid_global_names[i]], NoData
             ):
-                self.frames = self.FRAME_DICT[self.input_vid_global_names[i]]
+                self.frames.append(self.FRAME_DICT[self.input_vid_global_names[i]])
                 if isinstance(self.frames, np.ndarray) and len(self.frames.shape) <= 3:
                     self.frames = [self.frames]
                 if len(self.callbacks) > 0:
                     for c in self.callbacks:
-                        for f in range(len(self.frames)):
-                            frame = c(self.frames[f])
-                            if frame is not None:
-                                self.frames[f] = frame
-                for f in range(len(self.frames)):
-                    if self.frames[f].shape[-1] not in [1, 3] and len(self.frames[f].shape) != 2:
-                        print(f"Too many channels in output. (Got {self.frames[f].shape[-1]} instead of 1 or 3.) "
-                              f"Frame selection callback added.")
-                        print("Ctrl+scroll to change first channel.\n"
-                              "Shift+scroll to change second channel.\n"
-                              "Alt+scroll to change third channel.")
-                        sel = SelectChannels()
-                        sel.enable_mouse_control()
-                        sel.mouse_print_channels = True
-                        self.callbacks.append(sel)
-                        for fr in range(len(self.frames)):
-                            self.frames[fr] = self.callbacks[-1](self.frames[fr])
-                        break
-                win_num = self._display_frames(self.frames, win_num)
+                        frame = c(self.frames[-1])
+                        if frame is not None:
+                            self.frames[-1] = frame
+                self.__check_too_many_channels()
+        self._display_frames(self.frames)
 
-    def update(self, arr=None, id=None):
+    def update(self, arr:np.ndarray=None, id:str=None):
         """Update window frames once. Optionally add a new input and input id."""
         if arr is not None and id is not None:
             global_cv_display_callback(arr, id)
@@ -189,9 +188,8 @@ class SubscriberWindows(object):
         """Close all threads. Should be used with non-blocking mode."""
         window_commands.quit(force_all_read=False)
         self.__stop_all_cams()
-        if self.close_threads is not None:
-            for t in self.close_threads:
-                t.join()
+        for t in self.close_threads:
+            t.join()
 
     def __enter__(self):
         return self
@@ -203,7 +201,6 @@ class SubscriberWindows(object):
         self.end()
 
     def __delete__(self, instance):
-        del self.handle_mouse
         self.end()
 
     def loop(self):
@@ -228,9 +225,15 @@ def _get_video_callback_dict_threads(
         v_name = uid_for_source(v)
         v_callbacks: List[Callable[[np.ndarray], Any]] = []
         if v_name in callbacks:
-            v_callbacks.append(callbacks[v_name])
+            if isinstance(callbacks[v_name], List):
+                v_callbacks.extend(callbacks[v_name])
+            elif callable(callbacks[v_name]):
+                v_callbacks.append(callbacks[v_name])
         if v in callbacks:
-            v_callbacks.append(callbacks[v])
+            if isinstance(callbacks[v], List):
+                v_callbacks.extend(callbacks[v])
+            elif callable(callbacks[v]):
+                v_callbacks.append(callbacks[v])
         vid_threads.append(FrameUpdater(v, callbacks=v_callbacks, fps_limit=fps, request_size=size))
     return vid_threads
 

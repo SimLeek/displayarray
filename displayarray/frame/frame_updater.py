@@ -46,7 +46,9 @@ class FrameUpdater(threading.Thread):
         if frame is not None:
             try:
                 for c in self.callbacks:
-                    frame = c(frame)
+                    frame_c = c(frame)
+                    if frame_c is not None:
+                        frame = frame_c
                 if frame.shape[-1] not in [1, 3] and len(frame.shape) != 2:
                     print(f"Too many channels in output. (Got {frame.shape[-1]} instead of 1 or 3.) "
                           f"Frame selection callback added.")
