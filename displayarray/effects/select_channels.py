@@ -14,7 +14,7 @@ class SelectChannels(object):
 
     def __call__(self, arr):
         self.num_input_channels = arr.shape[-1]
-        out_arr = [arr[..., min(max(0, x), arr.shape[-1]-1)] for x in self.selected_channels]
+        out_arr = [arr[..., min(max(0, x), arr.shape[-1] - 1)] for x in self.selected_channels]
         out_arr = np.stack(out_arr, axis=-1)
         return out_arr
 

@@ -41,7 +41,6 @@ def test_loop():
         pub_t = mock_pubcam_thread.return_value = mock.MagicMock()
         mock_cam_dict.__contains__.side_effect = itertools.cycle([False, False, True])
         sub_cam = mock_frame_sub.return_value = mock.MagicMock()
-        sub_cam.get = mock.MagicMock()
         frame = sub_cam.get.return_value = mock.MagicMock()
         transformed_frame = mock.MagicMock()
         mock_cbs[0].return_value = transformed_frame
@@ -78,16 +77,15 @@ def test_callback_exception():
 def test_display():
     with mock.patch("displayarray.window.SubscriberWindows", new_callable=mock.MagicMock) as mock_sub_win:
         f = fup.FrameUpdater()
-        f.start = mock.MagicMock()
-        f.join = mock.MagicMock()
-        mock_sub_win_instance = mock_sub_win.return_value = mock.MagicMock()
+        with mock.patch.object(f, "start"), mock.patch.object(f, "join"):
+            mock_sub_win_instance = mock_sub_win.return_value = mock.MagicMock()
 
-        f.display()
+            f.display()
 
-        mock_sub_win.assert_called_once_with(video_sources=["0"], callbacks=[])
-        mock_sub_win_instance.loop.assert_called_once()
-        f.start.assert_called_once()
-        f.join.assert_called_once()
+            mock_sub_win.assert_called_once_with(video_sources=["0"], callbacks=[])
+            mock_sub_win_instance.loop.assert_called_once()
+            f.start.assert_called_once()
+            f.join.assert_called_once()
 
 
 def test_display_exception():
@@ -107,13 +105,17 @@ from displayarray.window.window_commands import win_cmd_pub
 
 def test_display_many_channels():
     with mock.patch("displayarray.frame.frame_updater.pub_cam_thread"), \
-         mock.patch("displayarray.frame.frame_updater.subscriber_dictionary.CV_CAMS_DICT") as mock_cam_dict, \
+         mock.patch.object(fup.subscriber_dictionary, "CV_CAMS_DICT") as mock_cam_dict, \
+            mock.patch.object(fup.subscriber_dictionary, "cam_frame_sub") as mock_sub_cam, \
             mock.patch("displayarray.frame.frame_updater.subscriber_dictionary.handler_cmd_sub") as handler_cmd_sub:
         mock_cam_dict.__contains__.side_effect = itertools.cycle([False, False, True])
         mock_sub_owner = handler_cmd_sub.return_value = mock.MagicMock()
         mock_sub_owner.get.side_effect = ["", "", "", "quit"]
 
         arr = np.ones((20, 20, 20))
+        sub = mock.MagicMock()
+        sub.get.return_value = arr
+        mock_sub_cam.return_value = sub
 
         f = fup.FrameUpdater(arr)
 

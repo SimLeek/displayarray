@@ -15,7 +15,7 @@ def global_cv_display_callback(frame: np.ndarray, cam_id: Union[int, str]):
     """
     from displayarray.window import SubscriberWindows
 
-    SubscriberWindows.FRAME_DICT[str(cam_id) + "frame"] = frame
+    SubscriberWindows.FRAME_DICT[str(cam_id)] = frame
 
 
 class function_display_callback(object):  # NOSONAR
