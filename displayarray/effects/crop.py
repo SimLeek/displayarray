@@ -6,27 +6,53 @@ class Crop(object):
     """A callback class that will return the input array cropped to the output size. N-dimensional."""
 
     def __init__(self, output_size=(64, 64, 3), center=None):
-        self.output_size = output_size
-        self.center = center
-        if center:
-            self.odd = (center[0] % 2, center[1] % 2)
+        self._output_size = None
+        self._center = None
+        self.odd_center = None
+        self.mouse_control = None
         self.input_size = None
+
+        self.center = center
+        self.output_size = output_size
+
+
+    @property
+    def output_size(self):
+        return self._output_size
+
+    @output_size.setter
+    def output_size(self, set):
+        self._output_size = set
+        if self._output_size is not None:
+            self._output_size = np.asarray(set)
+
+    @property
+    def center(self):
+        return self._center
+
+    @center.setter
+    def center(self, set):
+        self._center = set
+        if self._center is not None:
+            self._center = np.asarray(set)
 
     def __call__(self, arr):
         """Crop the input array to the specified output size. output is centered on self.center point on input."""
+        self.input_size = arr.shape
         if self.center is None:
-            self.input_size = arr.shape
             self.center = [int(arr.shape[x]) // 2 for x in range(arr.ndim)]
-            self.odd = [self.center[x] % 2 for x in range(arr.ndim)]
+        self.odd_out = np.array([self.output_size[x] % 2 for x in range(len(self.output_size))])
+        self.odd_center = np.array([self.center[x] % 2 for x in range(len(self.center))])
+
         center = self.center.copy()  # stop opencv from thread breaking us
         top_left_get = [min(max(0, center[x] - self.output_size[x] // 2), arr.shape[x] - 1) for x in range(arr.ndim)]
-        bottom_right_get = [min(max(0, center[x] + self.output_size[x] // 2 + self.odd[x]), arr.shape[x])
+        bottom_right_get = [min(max(0, center[x] + self.output_size[x] // 2 + self.odd_out[x]), arr.shape[x])
                             for x in range(arr.ndim)]
 
-        top_left_put = [min(max(0, -(bottom_right_get[x] - center[x] - self.output_size[x] // 2)), self.output_size[x])
+        top_left_put = [min(max(0, -(bottom_right_get[x] - center[x] - self.output_size[x] // 2)+ self.odd_out[x]), self.output_size[x])
                         for x in range(arr.ndim)]
         bottom_right_put = [
-            min(max(0, -(top_left_get[x] - center[x] - self.output_size[x] // 2 - self.odd[x])), self.output_size[x])
+            min(max(0,  top_left_put[x]+(bottom_right_get[x]-top_left_get[x])), self.output_size[x])
             for x in range(arr.ndim)]
         get_slices = [slice(x1, x2) for x1, x2 in zip(top_left_get, bottom_right_get)]
         get_slices = tuple(get_slices)
