@@ -38,8 +38,9 @@ def test_init():
 
 def test_bool():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "update") as mock_update:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "update"
+    ) as mock_update:
         sw = sub_win.SubscriberWindows()
 
         mock_update.assert_called_once()
@@ -57,9 +58,9 @@ def test_bool():
 
 def test_block():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "update"), \
-         mock.patch.object(sub_win.SubscriberWindows, "loop") as mock_loop:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "update"
+    ), mock.patch.object(sub_win.SubscriberWindows, "loop") as mock_loop:
         sw = sub_win.SubscriberWindows()
         sw.close_threads.append(mock.MagicMock())
 
@@ -81,28 +82,29 @@ def test_add_source():
 
 def test_add_window():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow") as mock_named_window, \
-            mock.patch.object(cv2, "setMouseCallback") as mock_set_mouse, \
-            mock.patch("displayarray.window.subscriber_windows.WeakMethod", new_callable=mock.MagicMock) as mock_weak:
+    with mock.patch.object(cv2, "namedWindow") as mock_named_window, mock.patch.object(
+        cv2, "setMouseCallback"
+    ) as mock_set_mouse, mock.patch(
+        "displayarray.window.subscriber_windows.WeakMethod", new_callable=mock.MagicMock
+    ) as mock_weak:
         weak_method = mock_weak.return_value = mock.MagicMock()
 
         sw = sub_win.SubscriberWindows().add_window("second window")
 
-        mock_weak.assert_has_calls([
-            mock.call(sw.handle_mouse),
-            mock.call(sw.handle_mouse)
-        ])
-        assert sw.window_names == ['displayarray', 'second window']
+        mock_weak.assert_has_calls(
+            [mock.call(sw.handle_mouse), mock.call(sw.handle_mouse)]
+        )
+        assert sw.window_names == ["displayarray", "second window"]
         mock_named_window.assert_has_calls(
             [
-                mock.call('displayarray (press ESC to quit)'),
-                mock.call('second window (press ESC to quit)')
+                mock.call("displayarray (press ESC to quit)"),
+                mock.call("second window (press ESC to quit)"),
             ]
         )
         mock_set_mouse.assert_has_calls(
             [
-                mock.call('displayarray (press ESC to quit)', weak_method),
-                mock.call('second window (press ESC to quit)', weak_method),
+                mock.call("displayarray (press ESC to quit)", weak_method),
+                mock.call("second window (press ESC to quit)", weak_method),
             ]
         )
 
@@ -119,20 +121,25 @@ def test_add_callback():
 
 def test_handle_keys():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch("displayarray.window.subscriber_windows.window_commands") as mock_win_cmd, \
-            mock.patch("displayarray.window.subscriber_windows.subscriber_dictionary.stop_cam") as mock_stop, \
-            mock.patch("displayarray.window.subscriber_windows.warnings") as mock_warnings, \
-            mock.patch("displayarray.window.subscriber_windows.RuntimeWarning") as mock_runtime, \
-            mock.patch.object(cv2, "destroyWindow") as mock_destroy:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch(
+        "displayarray.window.subscriber_windows.window_commands"
+    ) as mock_win_cmd, mock.patch(
+        "displayarray.window.subscriber_windows.subscriber_dictionary.stop_cam"
+    ) as mock_stop, mock.patch(
+        "displayarray.window.subscriber_windows.warnings"
+    ) as mock_warnings, mock.patch(
+        "displayarray.window.subscriber_windows.RuntimeWarning"
+    ) as mock_runtime, mock.patch.object(
+        cv2, "destroyWindow"
+    ) as mock_destroy:
         mock_runtime.return_value = mock_runtime
 
         # test ordinary
         sw = sub_win.SubscriberWindows()
 
-        sw.handle_keys(ord('h'))
+        sw.handle_keys(ord("h"))
 
-        mock_win_cmd.key_pub.publish.assert_called_once_with('h')
+        mock_win_cmd.key_pub.publish.assert_called_once_with("h")
 
         # test bad key
         def bad_key(k):
@@ -140,7 +147,7 @@ def test_handle_keys():
 
         mock_win_cmd.key_pub.publish = bad_key
 
-        sw.handle_keys(ord('b'))
+        sw.handle_keys(ord("b"))
 
         mock_runtime.assert_called_once_with(
             f"Unknown key code: [{ord('b')}]. Please report to the displayarray issue page."
@@ -160,9 +167,11 @@ def test_handle_keys():
 
 def test_handle_mouse():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch("displayarray.window.subscriber_windows.window_commands") as mock_win_cmd, \
-            mock.patch("displayarray.window.subscriber_windows.MouseEvent") as mock_mouse_event:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch(
+        "displayarray.window.subscriber_windows.window_commands"
+    ) as mock_win_cmd, mock.patch(
+        "displayarray.window.subscriber_windows.MouseEvent"
+    ) as mock_mouse_event:
         mock_mousey = mock_mouse_event.return_value = mock.MagicMock()
 
         sw = sub_win.SubscriberWindows()
@@ -174,12 +183,13 @@ def test_handle_mouse():
 
 def test_update_window_frames():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(cv2, "imshow") as mock_imshow:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        cv2, "imshow"
+    ) as mock_imshow:
         sw = sub_win.SubscriberWindows()
 
         frame = np.ones((100, 100))
-        sw.FRAME_DICT['0'] = frame
+        sw.FRAME_DICT["0"] = frame
 
         sw.update_window_frames()
 
@@ -189,8 +199,9 @@ def test_update_window_frames():
 
 def test_update_window_frames_callback():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(cv2, "imshow") as mock_imshow:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        cv2, "imshow"
+    ) as mock_imshow:
         cb = mock.MagicMock()
         cb2 = mock.MagicMock()
         frame = np.ones((100, 100))
@@ -199,40 +210,52 @@ def test_update_window_frames_callback():
         cb.return_value = frame2
         cb2.return_value = frame3
 
-        sw = sub_win.SubscriberWindows(window_names=["0", "1"], video_sources=[0, 1], callbacks=[cb, cb2])
+        sw = sub_win.SubscriberWindows(
+            window_names=["0", "1"], video_sources=[0, 1], callbacks=[cb, cb2]
+        )
 
-        sw.FRAME_DICT['0'] = frame
-        sw.FRAME_DICT['1'] = frame
+        sw.FRAME_DICT["0"] = frame
+        sw.FRAME_DICT["1"] = frame
 
         sw.update_window_frames()
 
         assert sw.frames == [frame3, frame3]
         assert np.all(cb.mock_calls[0].args[0] == frame)
         assert np.all(cb2.mock_calls[0].args[0] == frame2)
-        mock_imshow.assert_has_calls([
-            mock.call("0 (press ESC to quit)", frame3),
-            mock.call("1 (press ESC to quit)", frame3),
-        ])
+        mock_imshow.assert_has_calls(
+            [
+                mock.call("0 (press ESC to quit)", frame3),
+                mock.call("1 (press ESC to quit)", frame3),
+            ]
+        )
 
 
 def test_update_window_frames_too_many_channels():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(cv2, "imshow") as mock_imshow, \
-            mock.patch("displayarray.window.subscriber_windows.print") as mock_print:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        cv2, "imshow"
+    ) as mock_imshow, mock.patch(
+        "displayarray.window.subscriber_windows.print"
+    ) as mock_print:
         sw = sub_win.SubscriberWindows()
 
         frame = np.ones((100, 100, 100))
-        sw.FRAME_DICT['0'] = frame
+        sw.FRAME_DICT["0"] = frame
 
         sw.update_window_frames()
 
-        mock_print.assert_has_calls([
-            mock.call('Too many channels in output. (Got 100 instead of 1 or 3.) Frame selection callback added.'),
-            mock.call('Ctrl+scroll to change first channel.\n'
-                      'Shift+scroll to change second channel.\n'
-                      'Alt+scroll to change third channel.')
-        ])
+        mock_print.assert_has_calls(
+            [
+                mock.call(
+                    "Too many channels in output. (Got 100 instead of 1 or 3.) Frame selection callback added."
+                ),
+                mock.call(
+                    "Ctrl+scroll to change first channel.\n"
+                    "Shift+scroll to change second channel.\n"
+                    "Alt+scroll to change third channel."
+                ),
+            ]
+        )
 
         assert isinstance(sw.callbacks[-1], SelectChannels)
         assert sw.callbacks[-1].mouse_control is not None
@@ -242,13 +265,13 @@ def test_update_window_frames_too_many_channels():
 
 def test_update_window_frames_nested():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(cv2, "imshow") as mock_imshow, \
-            mock.patch("displayarray.window.subscriber_windows.print"):
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        cv2, "imshow"
+    ) as mock_imshow, mock.patch("displayarray.window.subscriber_windows.print"):
         sw = sub_win.SubscriberWindows()
 
         frame = np.ones((20, 100, 100, 100))
-        sw.FRAME_DICT['0'] = frame
+        sw.FRAME_DICT["0"] = frame
 
         sw.update_window_frames()
 
@@ -298,12 +321,13 @@ def test_update_window_frames_nested():
 
 def test_update_window_frames_exception():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(cv2, "imshow") as mock_imshow:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        cv2, "imshow"
+    ) as mock_imshow:
         sw = sub_win.SubscriberWindows()
 
         frame = RuntimeError("Sent from FrameUpdater")
-        sw.FRAME_DICT['0'] = frame
+        sw.FRAME_DICT["0"] = frame
 
         with pytest.raises(RuntimeError) as e:
             sw.update_window_frames()
@@ -312,11 +336,15 @@ def test_update_window_frames_exception():
 
 def test_update():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "update_window_frames")as mock_update_win_frames, \
-            mock.patch("displayarray.window.subscriber_windows.window_commands") as mock_win_cmd, \
-            mock.patch.object(sub_win.SubscriberWindows, "handle_keys")as mock_handle_keys, \
-            mock.patch.object(cv2, "waitKey") as key:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "update_window_frames"
+    ) as mock_update_win_frames, mock.patch(
+        "displayarray.window.subscriber_windows.window_commands"
+    ) as mock_win_cmd, mock.patch.object(
+        sub_win.SubscriberWindows, "handle_keys"
+    ) as mock_handle_keys, mock.patch.object(
+        cv2, "waitKey"
+    ) as key:
         sub_cmd = mock_win_cmd.win_cmd_sub.return_value = mock.MagicMock()
         key.return_value = 2
         mock_cmd = sub_cmd.get.return_value = mock.MagicMock()
@@ -335,27 +363,35 @@ def test_update():
 
 def test_update_with_array():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "update_window_frames")as mock_update_win_frames, \
-            mock.patch("displayarray.window.subscriber_windows.window_commands") as mock_win_cmd, \
-            mock.patch.object(sub_win.SubscriberWindows, "handle_keys")as mock_handle_keys, \
-            mock.patch.object(sub_win.SubscriberWindows, "add_source")as add_source, \
-            mock.patch.object(sub_win.SubscriberWindows, "add_window")as add_window, \
-            mock.patch("displayarray.window.subscriber_windows.global_cv_display_callback") as mock_cb, \
-            mock.patch.object(cv2, "waitKey") as key:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "update_window_frames"
+    ) as mock_update_win_frames, mock.patch(
+        "displayarray.window.subscriber_windows.window_commands"
+    ) as mock_win_cmd, mock.patch.object(
+        sub_win.SubscriberWindows, "handle_keys"
+    ) as mock_handle_keys, mock.patch.object(
+        sub_win.SubscriberWindows, "add_source"
+    ) as add_source, mock.patch.object(
+        sub_win.SubscriberWindows, "add_window"
+    ) as add_window, mock.patch(
+        "displayarray.window.subscriber_windows.global_cv_display_callback"
+    ) as mock_cb, mock.patch.object(
+        cv2, "waitKey"
+    ) as key:
         sw = sub_win.SubscriberWindows()
 
         sw.update(arr=1, id=2)
 
         mock_cb.assert_called_once_with(1, 2)
         add_source.assert_has_calls([mock.call(0), mock.call(2)])
-        add_window.assert_has_calls([mock.call('displayarray'), mock.call(2)])
+        add_window.assert_has_calls([mock.call("displayarray"), mock.call(2)])
 
 
 def test_wait_for_init():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "update")as update:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "update"
+    ) as update:
         sw = sub_win.SubscriberWindows()
 
         def mock_update():
@@ -375,9 +411,11 @@ def test_wait_for_init():
 
 def test_end():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch("displayarray.window.subscriber_windows.window_commands") as mock_win_cmd, \
-            mock.patch("displayarray.window.subscriber_windows.subscriber_dictionary.stop_cam") as mock_stop:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch(
+        "displayarray.window.subscriber_windows.window_commands"
+    ) as mock_win_cmd, mock.patch(
+        "displayarray.window.subscriber_windows.subscriber_dictionary.stop_cam"
+    ) as mock_stop:
         sw = sub_win.SubscriberWindows()
 
         sw.close_threads = [mock.MagicMock(), mock.MagicMock()]
@@ -392,8 +430,9 @@ def test_end():
 
 def test_enter_exit():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "end")as end:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "end"
+    ) as end:
         with sub_win.SubscriberWindows() as sw:
             assert isinstance(sw, sub_win.SubscriberWindows)
 
@@ -402,8 +441,9 @@ def test_enter_exit():
 
 def test_del():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch.object(sub_win.SubscriberWindows, "end")as end:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
+        sub_win.SubscriberWindows, "end"
+    ) as end:
         sw = sub_win.SubscriberWindows()
 
         del sw
@@ -413,10 +453,13 @@ def test_del():
 
 def test_loop():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch.object(cv2, "namedWindow"), \
-         mock.patch("displayarray.window.subscriber_windows.window_commands") as mock_win_cmd, \
-            mock.patch("displayarray.window.subscriber_windows.subscriber_dictionary.stop_cam") as mock_stop, \
-            mock.patch.object(sub_win.SubscriberWindows, "update")as update:
+    with mock.patch.object(cv2, "namedWindow"), mock.patch(
+        "displayarray.window.subscriber_windows.window_commands"
+    ) as mock_win_cmd, mock.patch(
+        "displayarray.window.subscriber_windows.subscriber_dictionary.stop_cam"
+    ) as mock_stop, mock.patch.object(
+        sub_win.SubscriberWindows, "update"
+    ) as update:
         sub_cmd = mock_win_cmd.win_cmd_sub.return_value = mock.MagicMock()
 
         sw = sub_win.SubscriberWindows()
@@ -440,50 +483,67 @@ def test_loop():
 
 def test_display():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch("displayarray.window.subscriber_windows.FrameUpdater") as fup, \
-            mock.patch("displayarray.window.subscriber_windows.SubscriberWindows") as sws:
+    with mock.patch(
+        "displayarray.window.subscriber_windows.FrameUpdater"
+    ) as fup, mock.patch(
+        "displayarray.window.subscriber_windows.SubscriberWindows"
+    ) as sws:
         fup_inst = fup.return_value = mock.MagicMock()
         sws_inst = sws.return_value = mock.MagicMock()
 
         d = sub_win.display(0, 1, size=(50, 50))
 
-        fup.assert_has_calls([
-            mock.call(0, fps_limit=240, request_size=(50, 50)),
-            mock.call(1, fps_limit=240, request_size=(50, 50))
-        ])
+        fup.assert_has_calls(
+            [
+                mock.call(0, fps_limit=240, request_size=(50, 50)),
+                mock.call(1, fps_limit=240, request_size=(50, 50)),
+            ]
+        )
         assert fup_inst.start.call_count == 2
-        sws.assert_called_once_with(window_names=["window 0", "window 1"], video_sources=(0, 1))
+        sws.assert_called_once_with(
+            window_names=["window 0", "window 1"], video_sources=(0, 1)
+        )
         assert sws_inst.close_threads == [fup_inst, fup_inst]
         assert d == sws_inst
 
 
 def test_display_blocking():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch("displayarray.window.subscriber_windows.FrameUpdater") as fup, \
-            mock.patch("displayarray.window.subscriber_windows.SubscriberWindows") as sws:
+    with mock.patch(
+        "displayarray.window.subscriber_windows.FrameUpdater"
+    ) as fup, mock.patch(
+        "displayarray.window.subscriber_windows.SubscriberWindows"
+    ) as sws:
         fup_inst = fup.return_value = mock.MagicMock()
         sws_inst = sws.return_value = mock.MagicMock()
 
         sub_win.display(0, 1, blocking=True)
 
         assert fup_inst.start.call_count == 2
-        sws.assert_called_once_with(window_names=["window 0", "window 1"], video_sources=(0, 1))
+        sws.assert_called_once_with(
+            window_names=["window 0", "window 1"], video_sources=(0, 1)
+        )
         sws_inst.loop.assert_called_once()
         assert fup_inst.join.call_count == 2
 
 
 def test_display_callbacks():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch("displayarray.window.subscriber_windows.FrameUpdater") as fup, \
-            mock.patch("displayarray.window.subscriber_windows.SubscriberWindows") as sws:
+    with mock.patch(
+        "displayarray.window.subscriber_windows.FrameUpdater"
+    ) as fup, mock.patch(
+        "displayarray.window.subscriber_windows.SubscriberWindows"
+    ) as sws:
         cb = mock.MagicMock()
 
         sub_win.display(0, 1, callbacks=cb)
 
-        fup.assert_has_calls([
-            mock.call(0, callbacks=[cb], fps_limit=240, request_size=(-1, -1)),
-            mock.call(1, callbacks=[cb], fps_limit=240, request_size=(-1, -1))
-        ])
+        fup.assert_has_calls(
+            [
+                mock.call(0, callbacks=[cb], fps_limit=240, request_size=(-1, -1)),
+                mock.call(1, callbacks=[cb], fps_limit=240, request_size=(-1, -1)),
+            ]
+        )
 
         fup.reset_mock()
 
@@ -491,24 +551,33 @@ def test_display_callbacks():
 
         sub_win.display(0, 1, callbacks=[cb, cb2], fps_limit=60)
 
-        fup.assert_has_calls([
-            mock.call(0, callbacks=[cb, cb2], fps_limit=60, request_size=(-1, -1)),
-            mock.call(1, callbacks=[cb, cb2], fps_limit=60, request_size=(-1, -1))
-        ])
+        fup.assert_has_calls(
+            [
+                mock.call(0, callbacks=[cb, cb2], fps_limit=60, request_size=(-1, -1)),
+                mock.call(1, callbacks=[cb, cb2], fps_limit=60, request_size=(-1, -1)),
+            ]
+        )
 
 
 def test_display_callbacks_dict():
     sub_win.SubscriberWindows.FRAME_DICT = {}
-    with mock.patch("displayarray.window.subscriber_windows.FrameUpdater") as fup, \
-            mock.patch("displayarray.window.subscriber_windows.SubscriberWindows") as sws:
+    with mock.patch(
+        "displayarray.window.subscriber_windows.FrameUpdater"
+    ) as fup, mock.patch(
+        "displayarray.window.subscriber_windows.SubscriberWindows"
+    ) as sws:
         cb1 = mock.MagicMock()
         cb2 = mock.MagicMock()
         cb3 = mock.MagicMock()
 
         sub_win.display(0, 1, 2, callbacks={0: cb1, 1: [cb1, cb2], "2": [cb3]})
 
-        fup.assert_has_calls([
-            mock.call(0, callbacks=[cb1], fps_limit=240, request_size=(-1, -1)),
-            mock.call(1, callbacks=[cb1, cb2], fps_limit=240, request_size=(-1, -1)),
-            mock.call(2, callbacks=[cb3], fps_limit=240, request_size=(-1, -1))
-        ])
+        fup.assert_has_calls(
+            [
+                mock.call(0, callbacks=[cb1], fps_limit=240, request_size=(-1, -1)),
+                mock.call(
+                    1, callbacks=[cb1, cb2], fps_limit=240, request_size=(-1, -1)
+                ),
+                mock.call(2, callbacks=[cb3], fps_limit=240, request_size=(-1, -1)),
+            ]
+        )

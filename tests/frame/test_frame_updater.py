@@ -30,11 +30,17 @@ def test_init():
 
 
 def test_loop():
-    with mock.patch("displayarray.frame.frame_updater.pub_cam_thread") as mock_pubcam_thread, \
-            mock.patch("displayarray.frame.frame_updater.subscriber_dictionary.CV_CAMS_DICT") as mock_cam_dict, \
-            mock.patch("displayarray.frame.frame_updater.subscriber_dictionary.cam_frame_sub") as mock_frame_sub, \
-            mock.patch("displayarray.frame.frame_updater.subscriber_dictionary.handler_cmd_sub") as handler_cmd_sub, \
-            mock.patch("displayarray.frame.frame_updater.global_cv_display_callback") as mock_global_cb:
+    with mock.patch(
+        "displayarray.frame.frame_updater.pub_cam_thread"
+    ) as mock_pubcam_thread, mock.patch(
+        "displayarray.frame.frame_updater.subscriber_dictionary.CV_CAMS_DICT"
+    ) as mock_cam_dict, mock.patch(
+        "displayarray.frame.frame_updater.subscriber_dictionary.cam_frame_sub"
+    ) as mock_frame_sub, mock.patch(
+        "displayarray.frame.frame_updater.subscriber_dictionary.handler_cmd_sub"
+    ) as handler_cmd_sub, mock.patch(
+        "displayarray.frame.frame_updater.global_cv_display_callback"
+    ) as mock_global_cb:
         mock_cbs = [mock.MagicMock(), mock.MagicMock()]
         ud = fup.FrameUpdater(0, callbacks=mock_cbs)
 
@@ -57,7 +63,7 @@ def test_loop():
         sub_cam.get.assert_has_calls([mock.call(blocking=True, timeout=1.0)] * 3)
         mock_cbs[0].assert_has_calls([mock.call(frame)] * 4)
         mock_cbs[1].assert_has_calls([mock.call(transformed_frame)] * 4)
-        mock_global_cb.assert_has_calls([mock.call(transformed_frame, '0')] * 4)
+        mock_global_cb.assert_has_calls([mock.call(transformed_frame, "0")] * 4)
         mock_sub_owner.release.assert_called_once()
         sub_cam.release.assert_called_once()
         pub_t.join.assert_called_once()
@@ -75,7 +81,9 @@ def test_callback_exception():
 
 
 def test_display():
-    with mock.patch("displayarray.window.SubscriberWindows", new_callable=mock.MagicMock) as mock_sub_win:
+    with mock.patch(
+        "displayarray.window.SubscriberWindows", new_callable=mock.MagicMock
+    ) as mock_sub_win:
         f = fup.FrameUpdater()
         with mock.patch.object(f, "start"), mock.patch.object(f, "join"):
             mock_sub_win_instance = mock_sub_win.return_value = mock.MagicMock()
@@ -89,7 +97,10 @@ def test_display():
 
 
 def test_display_exception():
-    with mock.patch("displayarray.window.SubscriberWindows", new_callable=mock.MagicMock) as mock_sub_win:
+    with mock.patch(
+        "displayarray.window.SubscriberWindows", new_callable=mock.MagicMock
+    ) as mock_sub_win:
+
         def redden_frame_print_spam(frame):
             frame[:, :, 0] = 0
             frame[:, :, 2] = 1 / 0
@@ -104,10 +115,15 @@ from displayarray.window.window_commands import win_cmd_pub
 
 
 def test_display_many_channels():
-    with mock.patch("displayarray.frame.frame_updater.pub_cam_thread"), \
-         mock.patch.object(fup.subscriber_dictionary, "CV_CAMS_DICT") as mock_cam_dict, \
-            mock.patch.object(fup.subscriber_dictionary, "cam_frame_sub") as mock_sub_cam, \
-            mock.patch("displayarray.frame.frame_updater.subscriber_dictionary.handler_cmd_sub") as handler_cmd_sub:
+    with mock.patch(
+        "displayarray.frame.frame_updater.pub_cam_thread"
+    ), mock.patch.object(
+        fup.subscriber_dictionary, "CV_CAMS_DICT"
+    ) as mock_cam_dict, mock.patch.object(
+        fup.subscriber_dictionary, "cam_frame_sub"
+    ) as mock_sub_cam, mock.patch(
+        "displayarray.frame.frame_updater.subscriber_dictionary.handler_cmd_sub"
+    ) as handler_cmd_sub:
         mock_cam_dict.__contains__.side_effect = itertools.cycle([False, False, True])
         mock_sub_owner = handler_cmd_sub.return_value = mock.MagicMock()
         mock_sub_owner.get.side_effect = ["", "", "", "quit"]

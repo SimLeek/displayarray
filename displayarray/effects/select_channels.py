@@ -14,7 +14,9 @@ class SelectChannels(object):
 
     def __call__(self, arr):
         self.num_input_channels = arr.shape[-1]
-        out_arr = [arr[..., min(max(0, x), arr.shape[-1] - 1)] for x in self.selected_channels]
+        out_arr = [
+            arr[..., min(max(0, x), arr.shape[-1] - 1)] for x in self.selected_channels
+        ]
         out_arr = np.stack(out_arr, axis=-1)
         return out_arr
 
@@ -25,7 +27,9 @@ class SelectChannels(object):
                 if me.flags & cv2.EVENT_FLAG_CTRLKEY:
                     if me.flags > 0:
                         self.selected_channels[0] += 1
-                        self.selected_channels[0] = min(self.selected_channels[0], self.num_input_channels - 1)
+                        self.selected_channels[0] = min(
+                            self.selected_channels[0], self.num_input_channels - 1
+                        )
                     else:
                         self.selected_channels[0] -= 1
                         self.selected_channels[0] = max(self.selected_channels[0], 0)
@@ -34,7 +38,9 @@ class SelectChannels(object):
                 elif me.flags & cv2.EVENT_FLAG_SHIFTKEY:
                     if me.flags > 0:
                         self.selected_channels[1] += 1
-                        self.selected_channels[1] = min(self.selected_channels[1], self.num_input_channels - 1)
+                        self.selected_channels[1] = min(
+                            self.selected_channels[1], self.num_input_channels - 1
+                        )
                     else:
                         self.selected_channels[1] -= 1
                         self.selected_channels[1] = max(self.selected_channels[1], 0)
@@ -43,7 +49,9 @@ class SelectChannels(object):
                 elif me.flags & cv2.EVENT_FLAG_ALTKEY:
                     if me.flags > 0:
                         self.selected_channels[2] += 1
-                        self.selected_channels[2] = min(self.selected_channels[2], self.num_input_channels - 1)
+                        self.selected_channels[2] = min(
+                            self.selected_channels[2], self.num_input_channels - 1
+                        )
                     else:
                         self.selected_channels[2] -= 1
                         self.selected_channels[2] = max(self.selected_channels[2], 0)

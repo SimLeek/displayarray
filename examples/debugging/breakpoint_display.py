@@ -2,7 +2,7 @@ from displayarray import breakpoint_display
 import numpy as np
 
 center = (75, 450)
-zoom = .5
+zoom = 0.5
 zoom_out = 1.0 / zoom
 
 arr = np.random.uniform(0, 1, (300, 600, 3))
@@ -13,8 +13,8 @@ x = np.arange(arr.shape[1])
 y_ = (y - center[0]) * zoom_out / arr.shape[0]
 x_ = (x - center[1]) * zoom_out / arr.shape[1]
 p = np.array(np.meshgrid(x_, y_))
-breakpoint_display(p[0] + .5)
-breakpoint_display(p[1] + .5)
+breakpoint_display(p[0] + 0.5)
+breakpoint_display(p[1] + 0.5)
 
 barrel_power = 1.5
 

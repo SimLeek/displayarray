@@ -2,7 +2,9 @@ import numpy as np
 from displayarray import display
 
 
-def mandel(height=240, width=320, itermax=255, y_min=-1.8, y_max=.6, x_min=-1.6, x_max=1.6):
+def mandel(
+    height=240, width=320, itermax=255, y_min=-1.8, y_max=0.6, x_min=-1.6, x_max=1.6
+):
     """
     Generate a view of the mandlebrot fractal
 
@@ -43,13 +45,13 @@ def mandel(height=240, width=320, itermax=255, y_min=-1.8, y_max=.6, x_min=-1.6,
     return img / 255.0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     img = mandel()
-    center = (0, -.6)
+    center = (0, -0.6)
     length = 3.2
     d = display(img)
     while d:
-        length *= .9
+        length *= 0.9
         y_min = center[1] - length / 2.0
         y_max = center[1] + length / 2.0
         x_min = center[0] - length / 2.0
