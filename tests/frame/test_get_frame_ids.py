@@ -4,7 +4,9 @@ import cv2
 
 
 def test_get_cam_ids():
-    with mock.patch.object(cv2, "VideoCapture", new_callable=mock.MagicMock) as mock_cv_capture:
+    with mock.patch.object(
+        cv2, "VideoCapture", new_callable=mock.MagicMock
+    ) as mock_cv_capture:
         cap = mock.MagicMock()
         cap.isOpened.return_value = True
         cap_end = mock.MagicMock()

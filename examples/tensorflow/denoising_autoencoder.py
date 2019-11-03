@@ -28,20 +28,33 @@ autoencoder.compile(loss="mse", optimizer="adam")
 while displayer:
     displayer.update()
     grab = tf.convert_to_tensor(
-        next(iter(displayer.FRAME_DICT.values()))[np.newaxis, ...].astype(np.float32) / 255.0
-    )
-    grab_noise = tf.convert_to_tensor(
-        ((next(iter(displayer.FRAME_DICT.values()))[np.newaxis, ...].astype(
-            np.float32) + np.random.uniform(0, 255, grab.shape)) / 2)
+        next(iter(displayer.FRAME_DICT.values()))[np.newaxis, ...].astype(np.float32)
         / 255.0
     )
-    displayer.update((grab_noise.numpy()[0] * 255.0).astype(np.uint8), "uid for grab noise")
+    grab_noise = tf.convert_to_tensor(
+        (
+            (
+                next(iter(displayer.FRAME_DICT.values()))[np.newaxis, ...].astype(
+                    np.float32
+                )
+                + np.random.uniform(0, 255, grab.shape)
+            )
+            / 2
+        )
+        / 255.0
+    )
+    displayer.update(
+        (grab_noise.numpy()[0] * 255.0).astype(np.uint8), "uid for grab noise"
+    )
     autoencoder.fit(grab_noise, grab, steps_per_epoch=1, epochs=1)
     output_image = autoencoder.predict(grab, steps=1)
-    displayer.update((output_image[0] * 255.0).astype(np.uint8), "uid for autoencoder output")
+    displayer.update(
+        (output_image[0] * 255.0).astype(np.uint8), "uid for autoencoder output"
+    )
 
-    get_3rd_layer_output = tf.keras.backend.function([autoencoder.layers[0].input],
-                                                     [autoencoder.layers[1].output])
+    get_3rd_layer_output = tf.keras.backend.function(
+        [autoencoder.layers[0].input], [autoencoder.layers[1].output]
+    )
     layer_output = get_3rd_layer_output([grab_noise])[0]
 
     displayer.update(layer_output[0], "conv 1")

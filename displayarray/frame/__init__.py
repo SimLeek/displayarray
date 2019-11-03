@@ -9,7 +9,7 @@ np_cam simulates numpy arrays as OpenCV cameras
 """
 
 from . import subscriber_dictionary
-from .frame_updater import FrameUpdater
+from .frame_updater import FrameUpdater, read_updates
 from .get_frame_ids import get_cam_ids
 from .np_to_opencv import NpCam
 from .frame_publishing import pub_cam_thread

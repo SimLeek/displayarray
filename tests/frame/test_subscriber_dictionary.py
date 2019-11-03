@@ -36,7 +36,9 @@ def test_register_cam():
 def test_stop_cam():
     subd.register_cam("test name 2")
     cam_publish = subd.CV_CAMS_DICT["test name 2"].cmd_pub.publish = mock.MagicMock()
-    cam_handler_publish = subd.CV_CAM_HANDLERS_DICT["test name 2"].cmd_pub.publish = mock.MagicMock()
+    cam_handler_publish = subd.CV_CAM_HANDLERS_DICT[
+        "test name 2"
+    ].cmd_pub.publish = mock.MagicMock()
 
     subd.stop_cam("test name 2")
 

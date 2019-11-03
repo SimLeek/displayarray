@@ -1,5 +1,5 @@
 import threading
-from typing import Union, Tuple, Any, Callable, List, Optional
+from typing import Union, Tuple, Any, Callable, List, Optional, Dict
 
 import numpy as np
 
@@ -8,7 +8,8 @@ from displayarray.uid import uid_for_source
 from displayarray.frame import subscriber_dictionary
 from displayarray.frame.frame_publishing import pub_cam_thread
 from displayarray.window import window_commands
-from ..effects.select_channels import SelectChannels
+from displayarray.effects.select_channels import SelectChannels
+from localpubsub import NoData
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
@@ -17,12 +18,12 @@ class FrameUpdater(threading.Thread):
     """Thread for updating frames from a video source."""
 
     def __init__(
-            self,
-            video_source: Union[int, str, np.ndarray] = 0,
-            callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
-            request_size: Tuple[int, int] = (-1, -1),
-            high_speed: bool = True,
-            fps_limit: float = 240,
+        self,
+        video_source: Union[int, str, np.ndarray] = 0,
+        callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
+        request_size: Tuple[int, int] = (-1, -1),
+        high_speed: bool = True,
+        fps_limit: float = 240,
     ):
         super(FrameUpdater, self).__init__(target=self.loop, args=())
         self.cam_id = uid_for_source(video_source)
@@ -50,11 +51,15 @@ class FrameUpdater(threading.Thread):
                     if frame_c is not None:
                         frame = frame_c
                 if frame.shape[-1] not in [1, 3] and len(frame.shape) != 2:
-                    print(f"Too many channels in output. (Got {frame.shape[-1]} instead of 1 or 3.) "
-                          f"Frame selection callback added.")
-                    print("Ctrl+scroll to change first channel.\n"
-                          "Shift+scroll to change second channel.\n"
-                          "Alt+scroll to change third channel.")
+                    print(
+                        f"Too many channels in output. (Got {frame.shape[-1]} instead of 1 or 3.) "
+                        f"Frame selection callback added."
+                    )
+                    print(
+                        "Ctrl+scroll to change first channel.\n"
+                        "Shift+scroll to change second channel.\n"
+                        "Alt+scroll to change third channel."
+                    )
                     sel = SelectChannels()
                     sel.enable_mouse_control()
                     sel.mouse_print_channels = True
@@ -104,3 +109,56 @@ class FrameUpdater(threading.Thread):
         self.join()
         if self.exception_raised is not None:
             raise self.exception_raised
+
+
+def read_updates(
+    *vids,
+    callbacks: Optional[
+        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
+    ] = None,
+    fps_limit=float("inf"),
+    size=(-1, -1),
+    end_callback: Callable[[], bool] = lambda: False,
+    blocking=True,
+):
+    """Reads back all updates from the requested videos.
+
+    Example usage:
+    >>> from examples.videos import test_video
+    >>> f = 0
+    >>> for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
+    ...   print(f"Frame:{f}. Array:{r}")
+
+    """
+    from displayarray.window import SubscriberWindows
+    from displayarray.window.subscriber_windows import _get_video_threads
+
+    vid_names = [uid_for_source(name) for name in vids]
+    vid_threads = _get_video_threads(
+        *vids, callbacks=callbacks, fps=fps_limit, size=size
+    )
+    for v in vid_threads:
+        v.start()
+
+    while not end_callback():
+        vid_update_dict = {}
+        dict_was_updated = False
+        for i in range(len(vid_names)):
+            if vid_names[i] in SubscriberWindows.FRAME_DICT and not isinstance(
+                SubscriberWindows.FRAME_DICT[vid_names[i]], NoData
+            ):
+                vid_update_dict[vid_names[i]] = SubscriberWindows.FRAME_DICT[
+                    vid_names[i]
+                ]
+                if (
+                    isinstance(vid_update_dict[vid_names[i]], np.ndarray)
+                    and len(vid_update_dict[vid_names[i]].shape) <= 3
+                ):
+                    vid_update_dict[vid_names[i]] = [vid_update_dict[vid_names[i]]]
+                dict_was_updated = True
+        if dict_was_updated or not blocking:
+            yield vid_update_dict
+    for v in vid_names:
+        subscriber_dictionary.stop_cam(v)
+    for v in vid_threads:
+        v.join()

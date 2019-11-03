@@ -17,12 +17,15 @@ class ControllableLens(object):
 
     def run_bleed(self, arr, x, y):
         arr[y, ...] = (arr[(y + 1) % len(y), ...] + arr[(y - 1) % len(y), ...]) / 2
-        arr[:, x, ...] = (arr[:, (x + 1) % len(x), ...] + arr[:, (x - 1) % len(x), ...]) / 2
+        arr[:, x, ...] = (
+            arr[:, (x + 1) % len(x), ...] + arr[:, (x - 1) % len(x), ...]
+        ) / 2
 
 
 class Barrel(ControllableLens):
-
-    def __init__(self, use_bleed=False, barrel_power=1, pincushion_power=1, zoom=1, center=None):
+    def __init__(
+        self, use_bleed=False, barrel_power=1, pincushion_power=1, zoom=1, center=None
+    ):
         super().__init__(use_bleed, zoom, center)
         self.center = center
         self.zoom = zoom
@@ -77,10 +80,10 @@ class Barrel(ControllableLens):
 
         radius = pow(radius, barrel_power)
 
-        x_new = .5 * (radius * np.cos(theta) + cx * 2)
+        x_new = 0.5 * (radius * np.cos(theta) + cx * 2)
         x_new = np.clip(x_new * len(x), 0, len(x) - 1)
 
-        y_new = .5 * (radius * np.sin(theta) + cy * 2)
+        y_new = 0.5 * (radius * np.sin(theta) + cy * 2)
         y_new = np.clip(y_new * len(y), 0, len(y) - 1)
 
         p = np.array(np.meshgrid(y, x)).astype(np.uint32)
@@ -100,8 +103,9 @@ class Barrel(ControllableLens):
 
 
 class Mustache(ControllableLens):
-
-    def __init__(self, use_bleed=False, barrel_power=1, pincushion_power=1, zoom=1, center=None):
+    def __init__(
+        self, use_bleed=False, barrel_power=1, pincushion_power=1, zoom=1, center=None
+    ):
         super().__init__(use_bleed, zoom, center)
         self.center = center
         self.zoom = zoom

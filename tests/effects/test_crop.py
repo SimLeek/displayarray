@@ -35,25 +35,11 @@ def test_1d_edges():
 
     cropped = c(np.ones((8,)))
 
-    assert np.all(
-        cropped == np.concatenate(
-            (
-                np.ones((2,)),
-                np.zeros((2,))
-            )
-        )
-    )
+    assert np.all(cropped == np.concatenate((np.ones((2,)), np.zeros((2,)))))
     c.center[...] = [8]
     cropped = c(np.ones((8,)))
 
-    assert np.all(
-        cropped == np.concatenate(
-            (
-                np.zeros((2,)),
-                np.ones((2,))
-            )
-        )
-    )
+    assert np.all(cropped == np.concatenate((np.zeros((2,)), np.ones((2,)))))
 
 
 def test_2d_crop():
@@ -70,22 +56,18 @@ def test_2d_edges():
     cropped = c(np.ones((8, 8)))
 
     assert np.all(
-        cropped == np.array(
-            [[1, 1, 1, 1, 1],
-             [1, 1, 1, 1, 1],
-             [0, 0, 0, 0, 0],
-             [0, 0, 0, 0, 0]]
+        cropped
+        == np.array(
+            [[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
         )
     )
     c.center = [4, 0]
     cropped = c(np.ones((8, 8)))
 
     assert np.all(
-        cropped == np.array(
-            [[1, 1, 1, 0, 0],
-             [1, 1, 1, 0, 0],
-             [1, 1, 1, 0, 0],
-             [1, 1, 1, 0, 0]]
+        cropped
+        == np.array(
+            [[1, 1, 1, 0, 0], [1, 1, 1, 0, 0], [1, 1, 1, 0, 0], [1, 1, 1, 0, 0]]
         )
     )
 
@@ -93,11 +75,9 @@ def test_2d_edges():
     cropped = c(np.ones((8, 8)))
 
     assert np.all(
-        cropped == np.array(
-            [[0, 0, 0, 0, 0],
-             [0, 0, 0, 0, 0],
-             [0, 0, 0, 1, 1],
-             [0, 0, 0, 1, 1]]
+        cropped
+        == np.array(
+            [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 1, 1], [0, 0, 0, 1, 1]]
         )
     )
 
@@ -105,11 +85,9 @@ def test_2d_edges():
     cropped = c(np.ones((8, 8)))
 
     assert np.all(
-        cropped == np.array(
-            [[0, 0, 0, 1, 1],
-             [0, 0, 0, 1, 1],
-             [0, 0, 0, 1, 1],
-             [0, 0, 0, 1, 1]]
+        cropped
+        == np.array(
+            [[0, 0, 0, 1, 1], [0, 0, 0, 1, 1], [0, 0, 0, 1, 1], [0, 0, 0, 1, 1]]
         )
     )
 
