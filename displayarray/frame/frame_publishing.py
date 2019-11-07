@@ -1,17 +1,18 @@
 import sys
 import threading
 import time
+import asyncio
 
 import cv2
 import numpy as np
 
-from displayarray import read_updates
 from displayarray.frame import subscriber_dictionary
-from displayarray.frame.frame_updater import FrameCallable
 from .np_to_opencv import NpCam
 from displayarray.uid import uid_for_source
 
 from typing import Union, Tuple, Optional, Dict, Any, List, Callable
+
+FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
 
 def pub_cam_loop(
@@ -97,7 +98,7 @@ def pub_cam_thread(
     return t
 
 
-def publish_updates_zero_mq(
+async def publish_updates_zero_mq(
     *vids,
     callbacks: Optional[
         Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
@@ -105,30 +106,47 @@ def publish_updates_zero_mq(
     fps_limit=float("inf"),
     size=(-1, -1),
     end_callback: Callable[[], bool] = lambda: False,
-    blocking=True,
+    blocking=False,
     publishing_address="tcp://127.0.0.1:5600",
-    prepend_topic=""
+    prepend_topic="",
+    flags=0,
+    copy=True,
+    track=False
 ):
     import zmq
+    from displayarray import read_updates
 
     ctx = zmq.Context()
     s = ctx.socket(zmq.PUB)
     s.bind(publishing_address)
 
+    if not blocking:
+        flags |= zmq.NOBLOCK
+
     try:
         for v in read_updates(vids, callbacks, fps_limit, size, end_callback, blocking):
-            for vid_name, frame in v.items():
-                s.send_multipart([prepend_topic + vid_name, frame])
+            if v:
+                for vid_name, frame in v.items():
+                    md = dict(
+                        dtype=str(frame.dtype),
+                        shape=frame.shape,
+                        name=prepend_topic + vid_name,
+                    )
+                    s.send_json(md, flags | zmq.SNDMORE)
+                    s.send(frame, flags, copy=copy, track=track)
+            if fps_limit:
+                await asyncio.sleep(1.0 / fps_limit)
+            else:
+                await asyncio.sleep(0)
     except KeyboardInterrupt:
         pass
     finally:
         vid_names = [uid_for_source(name) for name in vids]
         for v in vid_names:
             subscriber_dictionary.stop_cam(v)
-        sys.exit()
 
 
-def publish_updates_ros(
+async def publish_updates_ros(
     *vids,
     callbacks: Optional[
         Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
@@ -136,54 +154,64 @@ def publish_updates_ros(
     fps_limit=float("inf"),
     size=(-1, -1),
     end_callback: Callable[[], bool] = lambda: False,
-    blocking=True,
-    node_name="displayarray"
+    blocking=False,
+    node_name="displayarray",
+    publisher_name="npy",
+    rate_hz=None,
+    dtype=None
 ):
-    # mostly copied from:
-    # https://answers.ros.org/question/289557/custom-message-including-numpy-arrays/?answer=321122#post-id-321122
-
     import rospy
-    from std_msgs.msg import Float32MultiArray, MultiArrayDimension, UInt8MultiArray
+    from rospy.numpy_msg import numpy_msg
+    import std_msgs.msg
+    from displayarray import read_updates
 
-    vid_names = [uid_for_source(name) for name in vids]
+    def get_msg_type(dtype):
+        if dtype is None:
+            msg_type = {
+                np.float32: std_msgs.msg.Float32(),
+                np.float64: std_msgs.msg.Float64(),
+                np.bool: std_msgs.msg.Bool(),
+                np.char: std_msgs.msg.Char(),
+                np.int16: std_msgs.msg.Int16(),
+                np.int32: std_msgs.msg.Int32(),
+                np.int64: std_msgs.msg.Int64(),
+                np.str: std_msgs.msg.String(),
+                np.uint16: std_msgs.msg.UInt16(),
+                np.uint32: std_msgs.msg.UInt32(),
+                np.uint64: std_msgs.msg.UInt64(),
+                np.uint8: std_msgs.msg.UInt8(),
+            }[dtype]
+        else:
+            msg_type = (
+                dtype
+            )  # allow users to use their own custom messages in numpy arrays
+        return msg_type
+
+    publishers = {}
     rospy.init_node(node_name, anonymous=True)
-    pubs = {
-        vid_name: rospy.Publisher(vid_name, Float32MultiArray, queue_size=1)
-        for vid_name in vid_names
-    }
     try:
         for v in read_updates(vids, callbacks, fps_limit, size, end_callback, blocking):
-            if rospy.is_shutdown():
-                print("ROS is shutdown.")
-                break
-            for vid_name, frame in v.items():
-                if frame.dtype == np.uint8:
-                    frame_msg = UInt8MultiArray()
-                elif frame.dtype == np.float32:
-                    frame_msg = Float32MultiArray()
-                else:
-                    raise NotImplementedError(
-                        "Only uint8 and float32 types supported currently."
-                    )
-                frame_msg.layout.dim = []
-                dims = np.array(frame.shape)
-                frame_size = dims.prod() / float(
-                    frame.nbytes
-                )  # this is my attempt to normalize the strides size depending on .nbytes. not sure this is correct
-
-                for i in range(0, len(dims)):  # should be rather fast.
-                    # gets the num. of dims of nparray to construct the message
-                    frame_msg.layout.dim.append(MultiArrayDimension())
-                    frame_msg.layout.dim[i].size = dims[i]
-                    frame_msg.layout.dim[i].stride = dims[i:].prod() / frame_size
-                    frame_msg.layout.dim[i].label = "dim_%d" % i
-
-                frame_msg.data = np.frombuffer(frame.tobytes())
-                pubs[vid_name].publish(frame_msg)
+            if v:
+                if rospy.is_shutdown():
+                    break
+                for vid_name, frame in v.items():
+                    if vid_name not in publishers:
+                        dty = frame.dtype if dtype is None else dtype
+                        publishers[vid_name] = rospy.Publisher(
+                            publisher_name + vid_name,
+                            numpy_msg(get_msg_type(dty)),
+                            queue_size=10,
+                        )
+                    publishers[vid_name].publish(frame)
+            if rate_hz:
+                await asyncio.sleep(1.0 / rate_hz)
+            else:
+                await asyncio.sleep(0)
     except KeyboardInterrupt:
         pass
     finally:
         vid_names = [uid_for_source(name) for name in vids]
         for v in vid_names:
             subscriber_dictionary.stop_cam(v)
-        sys.exit()
+    if rospy.core.is_shutdown():
+        raise rospy.exceptions.ROSInterruptException("rospy shutdown")
