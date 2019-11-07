@@ -1,1 +1,0 @@
-A  threaded PubSub OpenCV interfaceREADME.md. Webcam and video feeds to multiple windows is supported.

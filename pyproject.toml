@@ -1,20 +1,30 @@
-[metadata]
+[tool.poetry]
 name = 'displayarray'
 version = '0.0.3'
 description = 'Tool for displaying numpy arrays.'
-author = 'SimLeek'
-author_email = 'simulator.leek@gmail.com'
-license = 'MIT/Apache-2.0'
-url = 'https://github.com/simleek/displayarray'
+authors = ['SimLeek <simulator.leek@gmail.com>']
+license = 'MIT'
+readme = "README.md"
+repository = "https://github.com/sdispater/poetry"
 
-[requires]
-python_version = ['3.5', '3.6', 'pypy', 'pypy3']
+[tool.poetry.dependencies]
+python = "^3.5"
+opencv_python = "3.4.5.20"
+docopt = "0.6.2"
+numpy = "1.16.1"
+localpubsub = "0.0.4"
+pyzmq = "18.1.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "5.2.1"
+typing = "3.7.4.1"
 
 [build-system]
-requires = ['setuptools', 'wheel']
+requires = ['poetry']
+build-backend = "poetry.masonry.api"
 
 [tool.hatch.commands]
 prerelease = 'hatch build'
 
-[scripts]
+[tool.poetry.scripts]
 displayarray = "displayarray.__main__:main"

@@ -21,6 +21,7 @@ Options:
 """
 
 from docopt import docopt
+import asyncio
 
 
 def main(argv=None):
@@ -44,20 +45,20 @@ def main(argv=None):
 
     async def msg_recv():
         nonlocal d
-        while True:
+        while d:
             if arguments["--message-backend"] == "ROS":
                 async for v_name, frame in read_updates_ros(
-                    [t for t, d in topics_split], [d for t, d in topics_split]
+                        [t for t, d in topics_split], [d for t, d in topics_split]
                 ):
                     d.update(arr=frame, id=v_name)
             if arguments["--message-backend"] == "ZeroMQ":
                 async for v_name, frame in read_updates_zero_mq(
-                    *[bytes(t, encoding="ascii") for t in topics]
+                        *[bytes(t, encoding="ascii") for t in topics]
                 ):
                     d.update(arr=frame, id=v_name)
 
     async def update_vids():
-        while True:
+        while v_disps:
             if v_disps:
                 v_disps.update()
                 await asyncio.sleep(0)
@@ -71,6 +72,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    import asyncio
-
     main()
