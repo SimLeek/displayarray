@@ -7,14 +7,13 @@ python:
   - '3.5'
   - '3.6'
   - '3.7'
+before_install:
+  - pip install poetry
+  - pip install tox
 install:
-  - pip install -r requirements.txt
+  - poetry install
 script:
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.5 ]]; then export CIBW_BUILD='cp35*'; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then export CIBW_BUILD='cp36*'; fi
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.7 ]]; then export CIBW_BUILD='cp37*'; fi
-  - pip install cibuildwheel==0.10.1
-  - cibuildwheel --output-dir wheelhouse
+  - poetry build
 deploy:
   provider: pypi
   user: SimLeek
