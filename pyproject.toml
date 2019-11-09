@@ -18,13 +18,14 @@ pyzmq = "18.1.0"
 [tool.poetry.dev-dependencies]
 pytest = "5.2.1"
 typing = "3.7.4.1"
-
-[build-system]
-requires = ['poetry']
-build-backend = "poetry.masonry.api"
+mock = "^3.0"
 
 [tool.hatch.commands]
 prerelease = 'hatch build'
 
 [tool.poetry.scripts]
 displayarray = "displayarray.__main__:main"
+[build-system]
+requires = ['poetry']
+build-backend = "poetry.masonry.api"
+
