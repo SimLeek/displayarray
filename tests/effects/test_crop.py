@@ -7,7 +7,7 @@ import mock
 def test_init_defaults():
     c = crop.Crop()
 
-    assert c.output_size == (64, 64, 3)
+    assert np.all(c.output_size == (64, 64, 3))
     assert c.center is None
     assert c.odd_center is None
     assert c.input_size is None
@@ -16,10 +16,12 @@ def test_init_defaults():
 def test_init():
     c = crop.Crop((32, 32, 3), (16, 16, 1))
 
-    assert c.output_size == (32, 32, 3)
-    assert c.center == (16, 16, 1)
-    assert c.odd_center == [0, 0, 1]
-    assert c.input_size is None
+    c(np.ndarray((64,64,3)))
+
+    assert np.all(c.output_size == (32, 32, 3))
+    assert np.all(c.center == (16, 16, 1))
+    assert np.all(c.odd_center == [0, 0, 1])
+    assert c.input_size == (64, 64, 3)
 
 
 def test_1d_crop():

@@ -160,8 +160,8 @@ def test_handle_keys():
 
         mock_destroy.assert_called_once_with("displayarray (press ESC to quit)")
         assert sw.exited is True
-        mock_win_cmd.quit.assert_called_once()
-        mock_stop.assert_called_once_with("0")
+        mock_win_cmd.quit.assert_called()
+        mock_stop.assert_called_with("0")
         assert ret == "quit"
 
 
@@ -422,8 +422,8 @@ def test_end():
 
         sw.end()
 
-        mock_win_cmd.quit.assert_called_once_with(force_all_read=False)
-        mock_stop.assert_called_once_with("0")
+        mock_win_cmd.quit.assert_called_with(force_all_read=False)
+        mock_stop.assert_called_with("0")
         sw.close_threads[0].join.assert_called_once()
         sw.close_threads[1].join.assert_called_once()
 
@@ -436,7 +436,7 @@ def test_enter_exit():
         with sub_win.SubscriberWindows() as sw:
             assert isinstance(sw, sub_win.SubscriberWindows)
 
-        end.assert_called_once()
+        end.assert_called()
 
 
 def test_del():
