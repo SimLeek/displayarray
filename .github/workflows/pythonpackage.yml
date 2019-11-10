@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: poetry install
       - name: Test with tox
-        run: tox -p auto -o
+        run: poetry run tox -p auto -o
       - name: Publish distribution 📦 to Test PyPI
         uses: pypa/gh-action-pypi-publish@master
         with:
