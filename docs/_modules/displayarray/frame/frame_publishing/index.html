@@ -1,0 +1,328 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>displayarray.frame.frame_publishing &#8212; DisplayArray  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex/" />
+    <link rel="search" title="Search" href="../../../../search/" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for displayarray.frame.frame_publishing</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">displayarray.frame</span> <span class="k">import</span> <span class="n">subscriber_dictionary</span>
+<span class="kn">from</span> <span class="nn">.np_to_opencv</span> <span class="k">import</span> <span class="n">NpCam</span>
+<span class="kn">from</span> <span class="nn">displayarray.uid</span> <span class="k">import</span> <span class="n">uid_for_source</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span>
+
+<span class="n">FrameCallable</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span>
+
+
+<span class="k">def</span> <span class="nf">pub_cam_loop</span><span class="p">(</span>
+    <span class="n">cam_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">request_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">high_speed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">fps_limit</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">240</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Publish whichever camera you select to CVCams.&lt;cam_id&gt;.Vid.</span>
+
+<span class="sd">    You can send a quit command &#39;quit&#39; to CVCams.&lt;cam_id&gt;.Cmd</span>
+<span class="sd">    Status information, such as failure to open, will be posted to CVCams.&lt;cam_id&gt;.Status</span>
+
+<span class="sd">    :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn&#39;t limited</span>
+<span class="sd">    :param fps_limit: Limits the frames per second.</span>
+<span class="sd">    :param cam_id: An integer representing which webcam to use, or a string representing a video file.</span>
+<span class="sd">    :param request_size: A tuple with width, then height, to request the video size.</span>
+<span class="sd">    :return: True if loop ended normally, False if it failed somehow.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">uid_for_source</span><span class="p">(</span><span class="n">cam_id</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cam_id</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+        <span class="n">cam</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">NpCam</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">VideoCapture</span><span class="p">]</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">VideoCapture</span><span class="p">(</span><span class="n">cam_id</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cam_id</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="n">cam</span> <span class="o">=</span> <span class="n">NpCam</span><span class="p">(</span><span class="n">cam_id</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="s2">&quot;Only strings or ints representing cameras, or numpy arrays representing pictures supported.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">register_cam</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="c1"># cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)</span>
+    <span class="n">frame_counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">sub</span> <span class="o">=</span> <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">cam_cmd_sub</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">sub</span><span class="o">.</span><span class="n">return_on_no_data</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">high_speed</span><span class="p">:</span>
+        <span class="n">cam</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">CAP_PROP_FOURCC</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CAP_OPENCV_MJPEG</span><span class="p">)</span>
+
+    <span class="n">cam</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">CAP_PROP_FRAME_WIDTH</span><span class="p">,</span> <span class="n">request_size</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">cam</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">CAP_PROP_FRAME_HEIGHT</span><span class="p">,</span> <span class="n">request_size</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cam</span><span class="o">.</span><span class="n">isOpened</span><span class="p">():</span>
+        <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">CV_CAMS_DICT</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">status_pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;failed&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">while</span> <span class="n">msg</span> <span class="o">!=</span> <span class="s2">&quot;quit&quot;</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">fps_limit</span> <span class="o">-</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">now</span><span class="p">)))</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="p">(</span><span class="n">ret</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span> <span class="o">=</span> <span class="n">cam</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>  <span class="c1"># type: Tuple[bool, np.ndarray ]</span>
+        <span class="k">if</span> <span class="n">ret</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">cam</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+            <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">CV_CAMS_DICT</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">status_pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">&quot;failed&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">cam</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">CAP_PROP_FRAME_COUNT</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">frame_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">frame_counter</span> <span class="o">&gt;=</span> <span class="n">cam</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">CAP_PROP_FRAME_COUNT</span><span class="p">):</span>
+                <span class="n">frame_counter</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">cam</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">VideoCapture</span><span class="p">(</span><span class="n">cam_id</span><span class="p">)</span>
+        <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">CV_CAMS_DICT</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">frame_pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">sub</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+    <span class="n">sub</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+    <span class="n">cam</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<div class="viewcode-block" id="pub_cam_thread"><a class="viewcode-back" href="../../../../frame/#displayarray.frame.pub_cam_thread">[docs]</a><span class="k">def</span> <span class="nf">pub_cam_thread</span><span class="p">(</span>
+    <span class="n">cam_id</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">request_ize</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">high_speed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">fps_limit</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">240</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Run pub_cam_loop in a new thread. Starts on creation.&quot;&quot;&quot;</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">pub_cam_loop</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">cam_id</span><span class="p">,</span> <span class="n">request_ize</span><span class="p">,</span> <span class="n">high_speed</span><span class="p">,</span> <span class="n">fps_limit</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">t</span></div>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">publish_updates_zero_mq</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">vids</span><span class="p">,</span>
+    <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+        <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">FrameCallable</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">],</span> <span class="n">FrameCallable</span><span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">fps_limit</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
+    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">end_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">publishing_address</span><span class="o">=</span><span class="s2">&quot;tcp://127.0.0.1:5600&quot;</span><span class="p">,</span>
+    <span class="n">prepend_topic</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="n">flags</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">track</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">zmq</span>
+    <span class="kn">from</span> <span class="nn">displayarray</span> <span class="k">import</span> <span class="n">read_updates</span>
+
+    <span class="n">ctx</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PUB</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">publishing_address</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
+        <span class="n">flags</span> <span class="o">|=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">NOBLOCK</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">read_updates</span><span class="p">(</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="p">,</span> <span class="n">fps_limit</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">end_callback</span><span class="p">,</span> <span class="n">blocking</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">v</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">vid_name</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">md</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">dtype</span><span class="p">),</span>
+                        <span class="n">shape</span><span class="o">=</span><span class="n">frame</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                        <span class="n">name</span><span class="o">=</span><span class="n">prepend_topic</span> <span class="o">+</span> <span class="n">vid_name</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">send_json</span><span class="p">(</span><span class="n">md</span><span class="p">,</span> <span class="n">flags</span> <span class="o">|</span> <span class="n">zmq</span><span class="o">.</span><span class="n">SNDMORE</span><span class="p">)</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="n">copy</span><span class="p">,</span> <span class="n">track</span><span class="o">=</span><span class="n">track</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fps_limit</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">fps_limit</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">vid_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">uid_for_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vid_names</span><span class="p">:</span>
+            <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">stop_cam</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">publish_updates_ros</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">vids</span><span class="p">,</span>
+    <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+        <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">FrameCallable</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">],</span> <span class="n">FrameCallable</span><span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">fps_limit</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
+    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="n">end_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">node_name</span><span class="o">=</span><span class="s2">&quot;displayarray&quot;</span><span class="p">,</span>
+    <span class="n">publisher_name</span><span class="o">=</span><span class="s2">&quot;npy&quot;</span><span class="p">,</span>
+    <span class="n">rate_hz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">rospy</span>
+    <span class="kn">from</span> <span class="nn">rospy.numpy_msg</span> <span class="k">import</span> <span class="n">numpy_msg</span>
+    <span class="kn">import</span> <span class="nn">std_msgs.msg</span>
+    <span class="kn">from</span> <span class="nn">displayarray</span> <span class="k">import</span> <span class="n">read_updates</span>
+
+    <span class="k">def</span> <span class="nf">get_msg_type</span><span class="p">(</span><span class="n">dtype</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg_type</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Float32</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Float64</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">bool</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Bool</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">char</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Char</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Int16</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Int32</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">Int64</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">str</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">String</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">UInt16</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">UInt32</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">uint64</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">UInt64</span><span class="p">(),</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span> <span class="n">std_msgs</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">UInt8</span><span class="p">(),</span>
+            <span class="p">}[</span><span class="n">dtype</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">msg_type</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">dtype</span>
+            <span class="p">)</span>  <span class="c1"># allow users to use their own custom messages in numpy arrays</span>
+        <span class="k">return</span> <span class="n">msg_type</span>
+
+    <span class="n">publishers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">rospy</span><span class="o">.</span><span class="n">init_node</span><span class="p">(</span><span class="n">node_name</span><span class="p">,</span> <span class="n">anonymous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">read_updates</span><span class="p">(</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="p">,</span> <span class="n">fps_limit</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">end_callback</span><span class="p">,</span> <span class="n">blocking</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">v</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">rospy</span><span class="o">.</span><span class="n">is_shutdown</span><span class="p">():</span>
+                    <span class="k">break</span>
+                <span class="k">for</span> <span class="n">vid_name</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">vid_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">publishers</span><span class="p">:</span>
+                        <span class="n">dty</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="n">dtype</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dtype</span>
+                        <span class="n">publishers</span><span class="p">[</span><span class="n">vid_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">rospy</span><span class="o">.</span><span class="n">Publisher</span><span class="p">(</span>
+                            <span class="n">publisher_name</span> <span class="o">+</span> <span class="n">vid_name</span><span class="p">,</span>
+                            <span class="n">numpy_msg</span><span class="p">(</span><span class="n">get_msg_type</span><span class="p">(</span><span class="n">dty</span><span class="p">)),</span>
+                            <span class="n">queue_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="n">publishers</span><span class="p">[</span><span class="n">vid_name</span><span class="p">]</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">frame</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rate_hz</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">rate_hz</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">vid_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">uid_for_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vid_names</span><span class="p">:</span>
+            <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">stop_cam</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rospy</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">is_shutdown</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="n">rospy</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ROSInterruptException</span><span class="p">(</span><span class="s2">&quot;rospy shutdown&quot;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../">DisplayArray</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Python API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray/">displayarray</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../crop/">displayarray.effects.crop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../lens/">displayarray.effects.lens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../select_channels/">displayarray.effects.select_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">displayarray.frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../window/">displayarray.window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../input/">displayarray.input</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Bash API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray_bash/">displayarray</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../">Documentation overview</a><ul>
+  <li><a href="../../../">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search/" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Simulator Leek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

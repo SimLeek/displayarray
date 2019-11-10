@@ -1,4 +1,6 @@
-from displayarray.subscriber_window import window_commands
+"""Decorators for creating input loops that OpenCV handles."""
+
+from displayarray.window import window_commands
 import threading
 import time
 
@@ -9,6 +11,7 @@ class MouseEvent(object):
     """Holds all the OpenCV mouse event information."""
 
     def __init__(self, event, x, y, flags, param):
+        """Create an OpenCV mouse event."""
         self.event = event
         self.x = x
         self.y = y
@@ -62,10 +65,19 @@ class _mouse_loop_thread(object):  # NOSONAR
 
 
 class mouse_loop(object):  # NOSONAR
-    """Run a function on mouse information that is received by the window, continuously in a new thread."""
+    """
+    Run a function on mouse information that is received by the window, continuously in a new thread.
 
-    def __init__(self, f, run_when_no_events=False):
-        self.t = threading.Thread(target=_mouse_loop_thread(f, run_when_no_events))
+    >>> @mouse_loop
+    ... def fun(mouse_event):
+    ...   print("x:{}, y:{}".format(mouse_event.x, mouse_event.y))
+    """
+
+    def __init__(self, f):
+        """Start a new mouse thread for the decorated function."""
+        self.t = threading.Thread(
+            target=_mouse_loop_thread(f, run_when_no_events=False)
+        )
         self.t.start()
 
     def __call__(self, *args, **kwargs):
@@ -111,10 +123,17 @@ class _key_loop_thread(object):  # NOSONAR
 
 
 class key_loop(object):  # NOSONAR
-    """Run a function on mouse information that is received by the window, continuously in a new thread."""
+    """
+    Run a function on mouse information that is received by the window, continuously in a new thread.
 
-    def __init__(self, f: Callable[[str], None], run_when_no_events=False):
-        self.t = threading.Thread(target=_key_loop_thread(f, run_when_no_events))
+    >>> @key_loop
+    ... def fun(key):
+    ...   print("key pressed:{}".format(key))
+    """
+
+    def __init__(self, f: Callable[[str], None]):
+        """Start a new key thread for the decorated function."""
+        self.t = threading.Thread(target=_key_loop_thread(f, run_when_no_events=False))
         self.t.start()
 
     def __call__(self, *args, **kwargs):

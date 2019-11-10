@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>displayarray.frame &#8212; DisplayArray  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex/" />
+    <link rel="search" title="Search" href="../search/" />
+    <link rel="next" title="displayarray.window" href="../window/" />
+    <link rel="prev" title="displayarray.effects.select_channels" href="../select_channels/" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-displayarray.frame">
+<span id="displayarray-frame"></span><h1>displayarray.frame<a class="headerlink" href="#module-displayarray.frame" title="Permalink to this headline">¶</a></h1>
+<p>Handles publishing arrays, videos, and cameras.</p>
+<p>CamCtrl handles sending and receiving commands to specific camera (or array/video) publishers
+VideoHandlerThread updates the frames for the global displayer, since OpenCV can only update on the main thread
+get_cam_ids gets the ids for all cameras that OpenCV can detect
+pub_cam_thread continually publishes updates to arrays, videos, and cameras
+np_cam simulates numpy arrays as OpenCV cameras</p>
+<dl class="class">
+<dt id="displayarray.frame.FrameUpdater">
+<em class="property">class </em><code class="sig-name descname">FrameUpdater</code><span class="sig-paren">(</span><em class="sig-param">video_source: Union[int, str, numpy.ndarray] = 0, callbacks: Union[List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, request_size: Tuple[int, int] = (-1, -1), high_speed: bool = True, fps_limit: float = 240</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#FrameUpdater"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.FrameUpdater" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thread for updating frames from a video source.</p>
+<dl class="method">
+<dt id="displayarray.frame.FrameUpdater.display">
+<code class="sig-name descname">display</code><span class="sig-paren">(</span><em class="sig-param">callbacks: List[Callable[[numpy.ndarray], Any]] = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#FrameUpdater.display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.FrameUpdater.display" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start default display operation.</p>
+<p>For multiple video sources, please use something outside of this class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>callbacks</strong> – List of callbacks to be run on frames before displaying to the screen.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.frame.FrameUpdater.loop">
+<code class="sig-name descname">loop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#FrameUpdater.loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.FrameUpdater.loop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Continually get frames from the video publisher, run callbacks on them, and listen to commands.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="displayarray.frame.read_updates">
+<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Callable[[numpy.ndarray], Optional[numpy.ndarray]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.read_updates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads back all updates from the requested videos.</p>
+<p>Example usage:
+&gt;&gt;&gt; from examples.videos import test_video
+&gt;&gt;&gt; f = 0
+&gt;&gt;&gt; for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
+…   print(f”Frame:{f}. Array:{r}”)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="displayarray.frame.get_cam_ids">
+<code class="sig-name descname">get_cam_ids</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List[int]<a class="reference internal" href="../_modules/displayarray/frame/get_frame_ids/#get_cam_ids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.get_cam_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all cameras that OpenCV can currently detect.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="displayarray.frame.NpCam">
+<em class="property">class </em><code class="sig-name descname">NpCam</code><span class="sig-paren">(</span><em class="sig-param">img</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/np_to_opencv/#NpCam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.NpCam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add OpenCV camera controls to a numpy array.</p>
+<dl class="method">
+<dt id="displayarray.frame.NpCam.get">
+<em class="property">static </em><code class="sig-name descname">get</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/np_to_opencv/#NpCam.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.NpCam.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get OpenCV args. Currently only a fake CAP_PROP_FRAME_COUNT to fix detecting video ends.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.frame.NpCam.isOpened">
+<code class="sig-name descname">isOpened</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/np_to_opencv/#NpCam.isOpened"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.NpCam.isOpened" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hack to tell OpenCV we’re opened until we call release.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.frame.NpCam.read">
+<code class="sig-name descname">read</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/np_to_opencv/#NpCam.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.NpCam.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read back the numpy array in standard “did it work”, “the array”, OpenCV format.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.frame.NpCam.release">
+<code class="sig-name descname">release</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/np_to_opencv/#NpCam.release"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.NpCam.release" title="Permalink to this definition">¶</a></dt>
+<dd><p>Let OpenCV know we’re finished.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.frame.NpCam.set">
+<code class="sig-name descname">set</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/np_to_opencv/#NpCam.set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.NpCam.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set CAP_PROP_FRAME_WIDTH or CAP_PROP_FRAME_HEIGHT to scale a numpy array to that size.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="displayarray.frame.pub_cam_thread">
+<code class="sig-name descname">pub_cam_thread</code><span class="sig-paren">(</span><em class="sig-param">cam_id: Union[int, str], request_ize: Tuple[int, int] = (-1, -1), high_speed: bool = True, fps_limit: float = 240</em><span class="sig-paren">)</span> &#x2192; threading.Thread<a class="reference internal" href="../_modules/displayarray/frame/frame_publishing/#pub_cam_thread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.pub_cam_thread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run pub_cam_loop in a new thread. Starts on creation.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../">DisplayArray</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Python API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../displayarray/">displayarray</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../crop/">displayarray.effects.crop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../lens/">displayarray.effects.lens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../select_channels/">displayarray.effects.select_channels</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">displayarray.frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../window/">displayarray.window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input/">displayarray.input</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Bash API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../displayarray_bash/">displayarray</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../">Documentation overview</a><ul>
+      <li>Previous: <a href="../select_channels/" title="previous chapter">displayarray.effects.select_channels</a></li>
+      <li>Next: <a href="../window/" title="next chapter">displayarray.window</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search/" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Simulator Leek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/frame.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
