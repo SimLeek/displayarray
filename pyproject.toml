@@ -4,7 +4,7 @@ version = '0.7.0'
 description = 'Tool for displaying numpy arrays.'
 authors = ['SimLeek <simulator.leek@gmail.com>']
 license = 'MIT'
-readme = "README.md"
+readme = "README.rst"
 repository = "https://github.com/sdispater/poetry"
 
 [tool.poetry.dependencies]
