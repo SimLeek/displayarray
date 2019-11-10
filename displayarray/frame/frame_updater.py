@@ -115,7 +115,11 @@ class FrameUpdater(threading.Thread):
 async def read_updates(
     *vids,
     callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
+        Union[
+            Dict[Any, Union[FrameCallable, List[FrameCallable]]],
+            List[FrameCallable],
+            FrameCallable,
+        ]
     ] = None,
     fps_limit=float("inf"),
     size=(-1, -1),
@@ -168,12 +172,12 @@ async def read_updates(
 
 async def read_updates_zero_mq(
     *topic_names,
-    address="tcp://127.0.0.1:5600",
-    flags=0,
-    copy=True,
-    track=False,
-    blocking=False,
-    end_callback: Callable[[Any], bool] = lambda: False,
+    address: str = "tcp://127.0.0.1:5600",
+    flags: int = 0,
+    copy: bool = True,
+    track: bool = False,
+    blocking: bool = False,
+    end_callback: Callable[[Any], bool] = lambda x: False,
 ):
     import zmq
 
@@ -210,7 +214,7 @@ async def read_updates_ros(
     dtypes=None,
     listener_node_name=None,
     poll_rate_hz=None,
-    end_callback: Callable[[Any], bool] = lambda: False,
+    end_callback: Callable[[Any], bool] = lambda x: False,
 ):
     import rospy
     from rospy.numpy_msg import numpy_msg
@@ -289,6 +293,7 @@ async def read_updates_ros(
         pass
     finally:
         if s is not None:
-            s.unregister()
+            for _, sub in s.items():
+                sub.unregister()
     if rospy.core.is_shutdown():
         raise rospy.exceptions.ROSInterruptException("rospy shutdown")

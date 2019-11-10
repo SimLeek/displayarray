@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>displayarray.window.subscriber_windows &#8212; DisplayArray  documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex/" />
+    <link rel="search" title="Search" href="../../../../search/" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for displayarray.window.subscriber_windows</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Thread</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">localpubsub</span> <span class="k">import</span> <span class="n">NoData</span>
+
+<span class="kn">from</span> <span class="nn">displayarray.callbacks</span> <span class="k">import</span> <span class="n">global_cv_display_callback</span>
+<span class="kn">from</span> <span class="nn">displayarray.uid</span> <span class="k">import</span> <span class="n">uid_for_source</span>
+<span class="kn">from</span> <span class="nn">displayarray.frame</span> <span class="k">import</span> <span class="n">subscriber_dictionary</span>
+<span class="kn">from</span> <span class="nn">displayarray.frame.frame_updater</span> <span class="k">import</span> <span class="n">FrameCallable</span>
+<span class="kn">from</span> <span class="nn">displayarray.frame.frame_updater</span> <span class="k">import</span> <span class="n">FrameUpdater</span>
+<span class="kn">from</span> <span class="nn">displayarray.input</span> <span class="k">import</span> <span class="n">MouseEvent</span>
+<span class="kn">from</span> <span class="nn">displayarray.window</span> <span class="k">import</span> <span class="n">window_commands</span>
+<span class="kn">from</span> <span class="nn">displayarray.util</span> <span class="k">import</span> <span class="n">WeakMethod</span>
+<span class="kn">from</span> <span class="nn">displayarray.effects.select_channels</span> <span class="k">import</span> <span class="n">SelectChannels</span>
+
+
+<div class="viewcode-block" id="SubscriberWindows"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows">[docs]</a><span class="k">class</span> <span class="nc">SubscriberWindows</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Windows that subscribe to updates to cameras, videos, and arrays.&quot;&quot;&quot;</span>
+
+    <span class="n">FRAME_DICT</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">ESC_KEY_CODES</span> <span class="o">=</span> <span class="p">[</span><span class="mi">27</span><span class="p">]</span>  <span class="c1"># ESC key on most keyboards</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">window_names</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;displayarray&quot;</span><span class="p">,),</span>
+        <span class="n">video_sources</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,),</span>
+        <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close_threads</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Thread</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_vid_global_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_cams</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exited</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">callbacks</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">video_sources</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="n">callbacks</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">window_names</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_window</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exited</span>
+
+    <span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ct</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_threads</span><span class="p">:</span>
+            <span class="n">ct</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SubscriberWindows.add_source"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.add_source">[docs]</a>    <span class="k">def</span> <span class="nf">add_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add another source for this class to display.&quot;&quot;&quot;</span>
+        <span class="n">uid</span> <span class="o">=</span> <span class="n">uid_for_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_vid_global_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_cams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="SubscriberWindows.add_window"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.add_window">[docs]</a>    <span class="k">def</span> <span class="nf">add_window</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add another window for this class to display sources with. The name will be the title.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">namedWindow</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; (press ESC to quit)&quot;</span><span class="p">)</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">WeakMethod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle_mouse</span><span class="p">)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">setMouseCallback</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; (press ESC to quit)&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="SubscriberWindows.add_callback"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.add_callback">[docs]</a>    <span class="k">def</span> <span class="nf">add_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a callback for this class to apply to videos.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+    <span class="k">def</span> <span class="nf">__stop_all_cams</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_names</span><span class="p">:</span>
+            <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">stop_cam</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SubscriberWindows.handle_keys"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.handle_keys">[docs]</a>    <span class="k">def</span> <span class="nf">handle_keys</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">key_input</span>  <span class="c1"># type: int</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Capture key input for the escape function and passing to key control subscriber threads.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">key_input</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ESC_KEY_CODES</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_names</span><span class="p">:</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">destroyWindow</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot; (press ESC to quit)&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exited</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">window_commands</span><span class="o">.</span><span class="n">quit</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__stop_all_cams</span><span class="p">()</span>
+            <span class="k">return</span> <span class="s2">&quot;quit&quot;</span>
+        <span class="k">elif</span> <span class="n">key_input</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">window_commands</span><span class="o">.</span><span class="n">key_pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="nb">chr</span><span class="p">(</span><span class="n">key_input</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="ne">RuntimeWarning</span><span class="p">(</span>
+                        <span class="n">f</span><span class="s2">&quot;Unknown key code: [</span><span class="si">{key_input}</span><span class="s2">]. Please report to the displayarray issue page.&quot;</span>
+                    <span class="p">)</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="SubscriberWindows.handle_mouse"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.handle_mouse">[docs]</a>    <span class="k">def</span> <span class="nf">handle_mouse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">param</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Capture mouse input for mouse control subscriber threads.&quot;&quot;&quot;</span>
+        <span class="n">mousey</span> <span class="o">=</span> <span class="n">MouseEvent</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">param</span><span class="p">)</span>
+        <span class="n">window_commands</span><span class="o">.</span><span class="n">mouse_pub</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="n">mousey</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_display_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frames</span><span class="p">,</span> <span class="n">win_num</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">frames</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)):</span>
+            <span class="c1"># detect nested:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span>
+                <span class="ow">or</span> <span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">num</span> <span class="o">==</span> <span class="mi">17</span>
+                <span class="ow">or</span> <span class="p">(</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span>
+                    <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span> <span class="ow">or</span> <span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">):</span>
+                <span class="n">win_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_display_frames</span><span class="p">(</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">],</span> <span class="n">win_num</span><span class="p">,</span> <span class="n">ids</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_names</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">win_num</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_window</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">win_num</span><span class="p">))</span>
+                <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">window_names</span><span class="p">[</span><span class="n">win_num</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; (press ESC to quit)&quot;</span><span class="p">,</span> <span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">win_num</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">win_num</span>
+
+    <span class="k">def</span> <span class="nf">__check_too_many_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">],</span> <span class="ne">Exception</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+                <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span>
+            <span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="n">f</span><span class="s2">&quot;Too many channels in output. (Got </span><span class="si">{self.frames[f].shape[-1]}</span><span class="s2"> instead of 1 or 3.) &quot;</span>
+                    <span class="n">f</span><span class="s2">&quot;Frame selection callback added.&quot;</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="s2">&quot;Ctrl+scroll to change first channel.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="s2">&quot;Shift+scroll to change second channel.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="s2">&quot;Alt+scroll to change third channel.&quot;</span>
+                <span class="p">)</span>
+                <span class="n">sel</span> <span class="o">=</span> <span class="n">SelectChannels</span><span class="p">()</span>
+                <span class="n">sel</span><span class="o">.</span><span class="n">enable_mouse_control</span><span class="p">()</span>
+                <span class="n">sel</span><span class="o">.</span><span class="n">mouse_print_channels</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sel</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">fr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">fr</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">](</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="n">fr</span><span class="p">])</span>
+                <span class="k">break</span>
+
+<div class="viewcode-block" id="SubscriberWindows.update_window_frames"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.update_window_frames">[docs]</a>    <span class="k">def</span> <span class="nf">update_window_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the windows with the newest data for all frames.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_vid_global_names</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_vid_global_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">FRAME_DICT</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">FRAME_DICT</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input_vid_global_names</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">NoData</span>
+            <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">FRAME_DICT</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input_vid_global_names</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">:</span>
+                        <span class="n">frame</span> <span class="o">=</span> <span class="n">c</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">frame</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__check_too_many_channels</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_display_frames</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SubscriberWindows.update"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update window frames once. Optionally add a new input and input id.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">arr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">global_cv_display_callback</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="nb">id</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_cams</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_window</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+        <span class="n">sub_cmd</span> <span class="o">=</span> <span class="n">window_commands</span><span class="o">.</span><span class="n">win_cmd_sub</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_window_frames</span><span class="p">()</span>
+        <span class="n">msg_cmd</span> <span class="o">=</span> <span class="n">sub_cmd</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_keys</span><span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">msg_cmd</span><span class="p">,</span> <span class="n">key</span></div>
+
+<div class="viewcode-block" id="SubscriberWindows.wait_for_init"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.wait_for_init">[docs]</a>    <span class="k">def</span> <span class="nf">wait_for_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update window frames in a loop until they&#39;re actually updated. Useful for waiting for cameras to init.&quot;&quot;&quot;</span>
+        <span class="n">msg_cmd</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">while</span> <span class="n">msg_cmd</span> <span class="o">!=</span> <span class="s2">&quot;quit&quot;</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;quit&quot;</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">msg_cmd</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+<div class="viewcode-block" id="SubscriberWindows.end"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.end">[docs]</a>    <span class="k">def</span> <span class="nf">end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close all threads. Should be used with non-blocking mode.&quot;&quot;&quot;</span>
+        <span class="n">window_commands</span><span class="o">.</span><span class="n">quit</span><span class="p">(</span><span class="n">force_all_read</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__stop_all_cams</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_threads</span><span class="p">:</span>
+            <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__delete__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SubscriberWindows.loop"><a class="viewcode-back" href="../../../../window/#displayarray.SubscriberWindows.loop">[docs]</a>    <span class="k">def</span> <span class="nf">loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Continually update window frame. OpenCV only allows this in the main thread.&quot;&quot;&quot;</span>
+        <span class="n">sub_cmd</span> <span class="o">=</span> <span class="n">window_commands</span><span class="o">.</span><span class="n">win_cmd_sub</span><span class="p">()</span>
+        <span class="n">msg_cmd</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">while</span> <span class="n">msg_cmd</span> <span class="o">!=</span> <span class="s2">&quot;quit&quot;</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;quit&quot;</span><span class="p">:</span>
+            <span class="n">msg_cmd</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="n">sub_cmd</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+        <span class="n">window_commands</span><span class="o">.</span><span class="n">quit</span><span class="p">(</span><span class="n">force_all_read</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__stop_all_cams</span><span class="p">()</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">_get_video_callback_dict_threads</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">FrameCallable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">assert</span> <span class="n">callbacks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="n">vid_threads</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">:</span>
+        <span class="n">v_name</span> <span class="o">=</span> <span class="n">uid_for_source</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">v_callbacks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">v_name</span> <span class="ow">in</span> <span class="n">callbacks</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v_name</span><span class="p">],</span> <span class="n">List</span><span class="p">):</span>
+                <span class="n">v_callbacks</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v_name</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v_name</span><span class="p">]):</span>
+                <span class="n">v_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v_name</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">callbacks</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v</span><span class="p">],</span> <span class="n">List</span><span class="p">):</span>
+                <span class="n">v_callbacks</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v</span><span class="p">]):</span>
+                <span class="n">v_callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">callbacks</span><span class="p">[</span><span class="n">v</span><span class="p">])</span>
+        <span class="n">vid_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">FrameUpdater</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">callbacks</span><span class="o">=</span><span class="n">v_callbacks</span><span class="p">,</span> <span class="n">fps_limit</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span> <span class="n">request_size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">vid_threads</span>
+
+
+<span class="k">def</span> <span class="nf">_get_video_threads</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">vids</span><span class="p">,</span>
+    <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+        <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">FrameCallable</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">],</span> <span class="n">FrameCallable</span><span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">fps</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+<span class="p">):</span>
+    <span class="n">vid_threads</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Thread</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">callbacks</span><span class="p">,</span> <span class="n">Dict</span><span class="p">):</span>
+        <span class="n">vid_threads</span> <span class="o">=</span> <span class="n">_get_video_callback_dict_threads</span><span class="p">(</span>
+            <span class="o">*</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">callbacks</span><span class="p">,</span> <span class="n">List</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">:</span>
+            <span class="n">vid_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">FrameUpdater</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span> <span class="n">fps_limit</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span> <span class="n">request_size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+            <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">callable</span><span class="p">(</span><span class="n">callbacks</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">:</span>
+            <span class="n">vid_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">FrameUpdater</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">callbacks</span><span class="p">],</span> <span class="n">fps_limit</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span> <span class="n">request_size</span><span class="o">=</span><span class="n">size</span><span class="p">)</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">vid_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FrameUpdater</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">fps_limit</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span> <span class="n">request_size</span><span class="o">=</span><span class="n">size</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">vid_threads</span>
+
+
+<div class="viewcode-block" id="display"><a class="viewcode-back" href="../../../../displayarray/#displayarray.display">[docs]</a><span class="k">def</span> <span class="nf">display</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">vids</span><span class="p">,</span>
+    <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
+        <span class="n">Union</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">FrameCallable</span><span class="p">],</span> <span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">],</span> <span class="n">FrameCallable</span><span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">window_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">fps_limit</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>
+    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Display all the arrays, cameras, and videos passed in.</span>
+
+<span class="sd">    callbacks can be a dictionary linking functions to videos, or a list of function or functions operating on the video</span>
+<span class="sd">     data before displaying.</span>
+<span class="sd">    Window names end up becoming the title of the windows</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">vid_threads</span> <span class="o">=</span> <span class="n">_get_video_threads</span><span class="p">(</span>
+        <span class="o">*</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">fps_limit</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vid_threads</span><span class="p">:</span>
+        <span class="n">v</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">window_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">window_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;window </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vids</span><span class="p">))]</span>
+    <span class="k">if</span> <span class="n">blocking</span><span class="p">:</span>
+        <span class="n">SubscriberWindows</span><span class="p">(</span><span class="n">window_names</span><span class="o">=</span><span class="n">window_names</span><span class="p">,</span> <span class="n">video_sources</span><span class="o">=</span><span class="n">vids</span><span class="p">)</span><span class="o">.</span><span class="n">loop</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">vt</span> <span class="ow">in</span> <span class="n">vid_threads</span><span class="p">:</span>
+            <span class="n">vt</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">SubscriberWindows</span><span class="p">(</span><span class="n">window_names</span><span class="o">=</span><span class="n">window_names</span><span class="p">,</span> <span class="n">video_sources</span><span class="o">=</span><span class="n">vids</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">close_threads</span> <span class="o">=</span> <span class="n">vid_threads</span>
+        <span class="k">return</span> <span class="n">s</span></div>
+
+
+<div class="viewcode-block" id="breakpoint_display"><a class="viewcode-back" href="../../../../displayarray/#displayarray.breakpoint_display">[docs]</a><span class="k">def</span> <span class="nf">breakpoint_display</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Display all the arrays, cameras, and videos passed in. Stops code execution until the window is closed.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">display</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../">DisplayArray</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Python API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray/">displayarray</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../crop/">displayarray.effects.crop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../lens/">displayarray.effects.lens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../select_channels/">displayarray.effects.select_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">displayarray.frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../window/">displayarray.window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../input/">displayarray.input</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Bash API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray_bash/">displayarray</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../">Documentation overview</a><ul>
+  <li><a href="../../../">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search/" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Simulator Leek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

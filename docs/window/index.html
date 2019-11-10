@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>displayarray.window &#8212; DisplayArray  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex/" />
+    <link rel="search" title="Search" href="../search/" />
+    <link rel="next" title="displayarray.input" href="../input/" />
+    <link rel="prev" title="displayarray.frame" href="../frame/" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="displayarray-window">
+<h1>displayarray.window<a class="headerlink" href="#displayarray-window" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="displayarray.window.SubscriberWindows">
+<em class="property">class </em><code class="sig-name descname">SubscriberWindows</code><span class="sig-paren">(</span><em class="sig-param">window_names: Iterable[str] = ('displayarray',), video_sources: Iterable[Union[str, int]] = (0,), callbacks: Optional[List[Callable[[numpy.ndarray], Any]]] = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows" title="Permalink to this definition">¶</a></dt>
+<dd><p>Windows that subscribe to updates to cameras, videos, and arrays.</p>
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.add_callback">
+<code class="sig-name descname">add_callback</code><span class="sig-paren">(</span><em class="sig-param">callback</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.add_callback"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.add_callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a callback for this class to apply to videos.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.add_source">
+<code class="sig-name descname">add_source</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.add_source"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.add_source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add another source for this class to display.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.add_window">
+<code class="sig-name descname">add_window</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.add_window"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.add_window" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add another window for this class to display sources with. The name will be the title.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.end">
+<code class="sig-name descname">end</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close all threads. Should be used with non-blocking mode.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.handle_keys">
+<code class="sig-name descname">handle_keys</code><span class="sig-paren">(</span><em class="sig-param">key_input</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.handle_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.handle_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture key input for the escape function and passing to key control subscriber threads.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.handle_mouse">
+<code class="sig-name descname">handle_mouse</code><span class="sig-paren">(</span><em class="sig-param">event</em>, <em class="sig-param">x</em>, <em class="sig-param">y</em>, <em class="sig-param">flags</em>, <em class="sig-param">param</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.handle_mouse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.handle_mouse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Capture mouse input for mouse control subscriber threads.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.loop">
+<code class="sig-name descname">loop</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.loop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Continually update window frame. OpenCV only allows this in the main thread.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.update">
+<code class="sig-name descname">update</code><span class="sig-paren">(</span><em class="sig-param">arr: numpy.ndarray = None</em>, <em class="sig-param">id: str = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update window frames once. Optionally add a new input and input id.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.update_window_frames">
+<code class="sig-name descname">update_window_frames</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.update_window_frames"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.update_window_frames" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the windows with the newest data for all frames.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.window.SubscriberWindows.wait_for_init">
+<code class="sig-name descname">wait_for_init</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.wait_for_init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.wait_for_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update window frames in a loop until they’re actually updated. Useful for waiting for cameras to init.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../">DisplayArray</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Python API</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../displayarray/">displayarray</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../crop/">displayarray.effects.crop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../lens/">displayarray.effects.lens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../select_channels/">displayarray.effects.select_channels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../frame/">displayarray.frame</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">displayarray.window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input/">displayarray.input</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Bash API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../displayarray_bash/">displayarray</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../">Documentation overview</a><ul>
+      <li>Previous: <a href="../frame/" title="previous chapter">displayarray.frame</a></li>
+      <li>Next: <a href="../input/" title="next chapter">displayarray.input</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search/" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Simulator Leek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/window.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

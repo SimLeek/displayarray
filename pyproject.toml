@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/sdispater/poetry"
 
 [tool.poetry.dependencies]
-python = "^3.5"
+python = "^3.6"
 opencv_python = "3.4.5.20"
 docopt = "0.6.2"
 numpy = "1.16.1"
@@ -19,12 +19,17 @@ pyzmq = "18.1.0"
 pytest = "5.2.1"
 typing = "3.7.4.1"
 mock = "^3.0"
-
-[tool.hatch.commands]
-prerelease = 'hatch build'
+tox = "^3.14"
+tox-gh-actions = "^0.3.0"
+coverage = "^4.5"
+sphinx = "^2.2"
+black = {version = "^18.3-alpha.0", allows-prereleases = true}
+mypy = "^0.740.0"
+pydocstyle = "^4.0"
 
 [tool.poetry.scripts]
 displayarray = "displayarray.__main__:main"
+
 [build-system]
 requires = ['poetry']
 build-backend = "poetry.masonry.api"

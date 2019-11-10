@@ -187,7 +187,7 @@ async def publish_updates_ros(
             )  # allow users to use their own custom messages in numpy arrays
         return msg_type
 
-    publishers = {}
+    publishers: Dict[str, rospy.Publisher] = {}
     rospy.init_node(node_name, anonymous=True)
     try:
         for v in read_updates(vids, callbacks, fps_limit, size, end_callback, blocking):

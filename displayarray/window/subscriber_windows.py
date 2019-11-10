@@ -226,7 +226,10 @@ class SubscriberWindows(object):
 
 
 def _get_video_callback_dict_threads(
-    *vids, callbacks: Optional[Dict[Any, FrameCallable]] = None, fps=240, size=(-1, -1)
+    *vids,
+    callbacks: Optional[Dict[Any, Union[FrameCallable, List[FrameCallable]]]] = None,
+    fps=240,
+    size=(-1, -1),
 ):
     assert callbacks is not None
     vid_threads = []
@@ -235,14 +238,14 @@ def _get_video_callback_dict_threads(
         v_callbacks: List[Callable[[np.ndarray], Any]] = []
         if v_name in callbacks:
             if isinstance(callbacks[v_name], List):
-                v_callbacks.extend(callbacks[v_name])
+                v_callbacks.extend(callbacks[v_name])  # type: ignore
             elif callable(callbacks[v_name]):
-                v_callbacks.append(callbacks[v_name])
+                v_callbacks.append(callbacks[v_name])  # type: ignore
         if v in callbacks:
             if isinstance(callbacks[v], List):
-                v_callbacks.extend(callbacks[v])
+                v_callbacks.extend(callbacks[v])  # type: ignore
             elif callable(callbacks[v]):
-                v_callbacks.append(callbacks[v])
+                v_callbacks.append(callbacks[v])  # type: ignore
         vid_threads.append(
             FrameUpdater(v, callbacks=v_callbacks, fps_limit=fps, request_size=size)
         )
@@ -252,7 +255,11 @@ def _get_video_callback_dict_threads(
 def _get_video_threads(
     *vids,
     callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
+        Union[
+            Dict[Any, Union[FrameCallable, List[FrameCallable]]],
+            List[FrameCallable],
+            FrameCallable,
+        ]
     ] = None,
     fps=240,
     size=(-1, -1),
@@ -282,7 +289,11 @@ def _get_video_threads(
 def display(
     *vids,
     callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
+        Union[
+            Dict[Any, Union[FrameCallable, List[FrameCallable]]],
+            List[FrameCallable],
+            FrameCallable,
+        ]
     ] = None,
     window_names=None,
     blocking=False,

@@ -48,12 +48,12 @@ def main(argv=None):
         while d:
             if arguments["--message-backend"] == "ROS":
                 async for v_name, frame in read_updates_ros(
-                        [t for t, d in topics_split], [d for t, d in topics_split]
+                    [t for t, d in topics_split], [d for t, d in topics_split]
                 ):
                     d.update(arr=frame, id=v_name)
             if arguments["--message-backend"] == "ZeroMQ":
                 async for v_name, frame in read_updates_zero_mq(
-                        *[bytes(t, encoding="ascii") for t in topics]
+                    *[bytes(t, encoding="ascii") for t in topics]
                 ):
                     d.update(arr=frame, id=v_name)
 
