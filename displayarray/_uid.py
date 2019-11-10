@@ -1,3 +1,5 @@
+"""Generate unique IDs for videos."""
+
 from collections.abc import Hashable
 
 

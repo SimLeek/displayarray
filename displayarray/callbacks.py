@@ -1,3 +1,5 @@
+"""Standard callbacks to use on incoming frames."""
+
 from displayarray.window import window_commands
 import numpy as np
 
@@ -35,7 +37,7 @@ class function_display_callback(object):  # NOSONAR
     """
 
     def __init__(self, display_function, finish_function=None):
-
+        """Run display_function on frames."""
         self.looping = True
         self.first_call = True
 

@@ -9,6 +9,7 @@ class CamHandler(object):
     """A camera handler instance that will send commands to and receive data from a camera."""
 
     def __init__(self, name, sub):
+        """Create the cam handler."""
         self.name = name
         self.cmd = None
         self.sub: VariableSub = sub
@@ -20,6 +21,7 @@ class Cam(object):
     """A camera publisher instance that will send frames, status, and commands out."""
 
     def __init__(self, name):
+        """Create the cam."""
         self.name = name
         self.cmd = None
         self.frame_pub = VariablePub()

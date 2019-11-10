@@ -1,3 +1,5 @@
+"""Functions needed to deal with OpenCV."""
+
 import weakref
 
 

@@ -1,4 +1,5 @@
-import sys
+"""Publish frames so any function within this program can find them."""
+
 import threading
 import time
 import asyncio
@@ -8,7 +9,7 @@ import numpy as np
 
 from displayarray.frame import subscriber_dictionary
 from .np_to_opencv import NpCam
-from displayarray.uid import uid_for_source
+from displayarray._uid import uid_for_source
 
 from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 
@@ -113,6 +114,7 @@ async def publish_updates_zero_mq(
     copy=True,
     track=False
 ):
+    """Publish frames to ZeroMQ when they're updated."""
     import zmq
     from displayarray import read_updates
 
@@ -160,6 +162,7 @@ async def publish_updates_ros(
     rate_hz=None,
     dtype=None
 ):
+    """Publish frames to ROS when they're updated."""
     import rospy
     from rospy.numpy_msg import numpy_msg
     import std_msgs.msg

@@ -1,3 +1,5 @@
+"""Get and handle updated frames."""
+
 import threading
 import asyncio
 from typing import Union, Tuple, Any, Callable, List, Optional, Dict
@@ -5,7 +7,7 @@ from typing import Union, Tuple, Any, Callable, List, Optional, Dict
 import numpy as np
 
 from displayarray.callbacks import global_cv_display_callback
-from displayarray.uid import uid_for_source
+from displayarray._uid import uid_for_source
 from displayarray.frame import subscriber_dictionary
 from displayarray.frame.frame_publishing import pub_cam_thread
 from displayarray.window import window_commands
@@ -26,6 +28,7 @@ class FrameUpdater(threading.Thread):
         high_speed: bool = True,
         fps_limit: float = 240,
     ):
+        """Create the frame updater thread."""
         super(FrameUpdater, self).__init__(target=self.loop, args=())
         self.cam_id = uid_for_source(video_source)
         self.video_source = video_source
@@ -126,7 +129,8 @@ async def read_updates(
     end_callback: Callable[[], bool] = lambda: False,
     blocking=True,
 ):
-    """Reads back all updates from the requested videos.
+    """
+    Read back all updates from the requested videos.
 
     Example usage:
     >>> from examples.videos import test_video
@@ -179,6 +183,7 @@ async def read_updates_zero_mq(
     blocking: bool = False,
     end_callback: Callable[[Any], bool] = lambda x: False,
 ):
+    """Read updated frames from ZeroMQ."""
     import zmq
 
     ctx = zmq.Context()
@@ -216,6 +221,7 @@ async def read_updates_ros(
     poll_rate_hz=None,
     end_callback: Callable[[Any], bool] = lambda x: False,
 ):
+    """Read updated frames from ROS."""
     import rospy
     from rospy.numpy_msg import numpy_msg
     from rospy.client import _WFM

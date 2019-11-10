@@ -1,3 +1,5 @@
+"""Commands to control the array displaying windows."""
+
 from localpubsub import VariablePub, VariableSub
 
 key_pub = VariablePub()

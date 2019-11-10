@@ -1,9 +1,11 @@
+"""Create lens effects. Currently only 2D+color arrays are supported."""
+
 import numpy as np
-from ..input import mouse_loop
+from displayarray.input import mouse_loop
 import cv2
 
 
-class ControllableLens(object):
+class _ControllableLens(object):
     def __init__(self, use_bleed=False, zoom=1, center=None):
         self.center = center
         self.zoom = zoom
@@ -22,10 +24,66 @@ class ControllableLens(object):
         ) / 2
 
 
-class Barrel(ControllableLens):
-    def __init__(
-        self, use_bleed=False, barrel_power=1, pincushion_power=1, zoom=1, center=None
-    ):
+class Barrel(_ControllableLens):
+    """
+    Create a barrel distortion.
+
+    >>> distort_it = Barrel(zoom=1, barrel_power=1.5)
+    >>> x = np.linspace(0, 1, 4)
+    >>> y = np.linspace(0, 1, 4)
+    >>> c = np.linspace(0, 1, 2)
+    >>> arrx, arry, arrc = np.meshgrid(x,y,c)
+    >>> arrx
+    array([[[0.        , 0.        ],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [1.        , 1.        ]],
+    <BLANKLINE>
+           [[0.        , 0.        ],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [1.        , 1.        ]],
+    <BLANKLINE>
+           [[0.        , 0.        ],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [1.        , 1.        ]],
+    <BLANKLINE>
+           [[0.        , 0.        ],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [1.        , 1.        ]]])
+
+    >>> distort_it(arrx)
+    array([[[0.33333333, 0.33333333],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [0.66666667, 0.66666667]],
+    <BLANKLINE>
+           [[0.33333333, 0.33333333],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [0.66666667, 0.66666667]],
+    <BLANKLINE>
+           [[0.33333333, 0.33333333],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [0.66666667, 0.66666667]],
+    <BLANKLINE>
+           [[0.33333333, 0.33333333],
+            [0.33333333, 0.33333333],
+            [0.66666667, 0.66666667],
+            [0.66666667, 0.66666667]]])
+
+    :param zoom: How far to zoom into the array
+    :param barrel_power: How much to distort.
+                         1 = no distortion. >1 increases size of center. 0<x<1 increases peripheral.
+    :param center: Center to apply the distortion at on the source image.
+    :param use_bleed: Fill in black regions with previos frame values. Shouldn't be neccesary in most cases.
+    """
+
+    def __init__(self, zoom=1, barrel_power=1, center=None, use_bleed=False):
+        """Create the distorter."""
         super().__init__(use_bleed, zoom, center)
         self.center = center
         self.zoom = zoom
@@ -36,7 +94,9 @@ class Barrel(ControllableLens):
 
     def enable_mouse_control(self):
         """
-        Move the mouse to center the image, scroll to increase/decrease barrel, ctrl+scroll to increase/decrease zoom
+        Enable mouse control.
+
+        Move the mouse to center the image, scroll to increase/decrease barrel, ctrl+scroll to increase/decrease zoom.
         """
 
         @mouse_loop
@@ -58,6 +118,7 @@ class Barrel(ControllableLens):
         return self
 
     def __call__(self, arr):
+        """Run the distortion on an array."""
         zoom_out = 1.0 / self.zoom
         self.check_setup_bleed(arr)
 
@@ -102,10 +163,13 @@ class Barrel(ControllableLens):
         return arr
 
 
-class Mustache(ControllableLens):
+class Mustache(_ControllableLens):
+    """Create a mustache distortion."""
+
     def __init__(
         self, use_bleed=False, barrel_power=1, pincushion_power=1, zoom=1, center=None
     ):
+        """Create the distorter."""
         super().__init__(use_bleed, zoom, center)
         self.center = center
         self.zoom = zoom
@@ -116,6 +180,15 @@ class Mustache(ControllableLens):
         self.mouse_control = None
 
     def enable_mouse_control(self):
+        """
+        Enable mouse control.
+
+        Move the mouse to center the image.
+        Scroll to increase/decrease barrel.
+        Ctrl+scroll to increase/decrease zoom.
+        Shift+Scroll to increase/decrease pincushion.
+        """
+
         @mouse_loop
         def m_loop(me):
             self.center[:] = [me.y, me.x]
@@ -139,6 +212,7 @@ class Mustache(ControllableLens):
         self.mouse_control = m_loop
 
     def __call__(self, arr):
+        """Run the distortion on an array."""
         zoom_out = 1.0 / self.zoom
         self.check_setup_bleed(arr)
 

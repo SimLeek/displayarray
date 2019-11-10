@@ -1,3 +1,5 @@
+"""OpenCV windows that will display the arrays."""
+
 import warnings
 from threading import Thread
 from typing import List, Union, Callable, Any, Dict, Iterable, Optional
@@ -7,13 +9,13 @@ import numpy as np
 from localpubsub import NoData
 
 from displayarray.callbacks import global_cv_display_callback
-from displayarray.uid import uid_for_source
+from displayarray._uid import uid_for_source
 from displayarray.frame import subscriber_dictionary
 from displayarray.frame.frame_updater import FrameCallable
 from displayarray.frame.frame_updater import FrameUpdater
 from displayarray.input import MouseEvent
 from displayarray.window import window_commands
-from displayarray.util import WeakMethod
+from displayarray._util import WeakMethod
 from displayarray.effects.select_channels import SelectChannels
 
 
@@ -29,6 +31,7 @@ class SubscriberWindows(object):
         video_sources: Iterable[Union[str, int]] = (0,),
         callbacks: Optional[List[Callable[[np.ndarray], Any]]] = None,
     ):
+        """Create the array displaying window."""
         self.source_names: List[Union[str, int]] = []
         self.close_threads: Optional[List[Thread]] = []
         self.frames: List[np.ndarray] = []
@@ -52,6 +55,7 @@ class SubscriberWindows(object):
         return not self.exited
 
     def block(self):
+        """Update the window continuously while blocking the outer program."""
         self.loop()
         for ct in self.close_threads:
             ct.join()

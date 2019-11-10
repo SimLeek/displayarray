@@ -1,10 +1,21 @@
+"""Reduce many color images to the three colors that your eyeballs can see."""
+
 import numpy as np
 from ..input import mouse_loop
 import cv2
 
+from typing import Iterable
+
 
 class SelectChannels(object):
-    def __init__(self, selected_channels=None):
+    """
+    Select channels to display from an array with too many colors.
+
+    :param selected_channels: the list of channels to display.
+    """
+
+    def __init__(self, selected_channels: Iterable[int] = None):
+        """Select which channels from the input array to display in the output."""
         if selected_channels is None:
             selected_channels = [0, 0, 0]
         self.selected_channels = selected_channels
@@ -13,6 +24,7 @@ class SelectChannels(object):
         self.num_input_channels = None
 
     def __call__(self, arr):
+        """Run the channel selector."""
         self.num_input_channels = arr.shape[-1]
         out_arr = [
             arr[..., min(max(0, x), arr.shape[-1] - 1)] for x in self.selected_channels
@@ -21,6 +33,14 @@ class SelectChannels(object):
         return out_arr
 
     def enable_mouse_control(self):
+        """
+        Enable mouse control.
+
+        Alt+Scroll to increase/decrease channel 2.
+        Shift+Scroll to increase/decrease channel 1.
+        Ctrl+scroll to increase/decrease channel 0.
+        """
+
         @mouse_loop
         def m_loop(me):
             if me.event == cv2.EVENT_MOUSEWHEEL:

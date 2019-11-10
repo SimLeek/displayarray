@@ -1,5 +1,6 @@
 """
 DisplayArray.
+
 Display NumPy arrays.
 
 Usage:
@@ -25,6 +26,7 @@ import asyncio
 
 
 def main(argv=None):
+    """Process command line arguments."""
     arguments = docopt(__doc__, argv=argv)
     if arguments["--version"]:
         from displayarray import __version__

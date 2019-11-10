@@ -1,11 +1,26 @@
+"""Crop any n-dimensional array."""
+
 import numpy as np
-from ..input import mouse_loop
+from displayarray.input import mouse_loop
 
 
 class Crop(object):
-    """A callback class that will return the input array cropped to the output size. N-dimensional."""
+    """
+    A callback class that will return the input array cropped to the output size. N-dimensional.
+
+    >>> crop_it = Crop((2,2,2))
+    >>> arr = np.ones((4,4,4))
+    >>> crop_it(arr)
+    array([[[1., 1.],
+            [1., 1.]],
+    <BLANKLINE>
+           [[1., 1.],
+            [1., 1.]]])
+
+    """
 
     def __init__(self, output_size=(64, 64, 3), center=None):
+        """Create the cropper."""
         self._output_size = None
         self._center = None
         self.odd_center = None
@@ -17,20 +32,24 @@ class Crop(object):
 
     @property
     def output_size(self):
+        """Get the output size after cropping."""
         return self._output_size
 
     @output_size.setter
     def output_size(self, set):
+        """Set what the output size will be after cropping."""
         self._output_size = set
         if self._output_size is not None:
             self._output_size = np.asarray(set)
 
     @property
     def center(self):
+        """Get center crop position on the input."""
         return self._center
 
     @center.setter
     def center(self, set):
+        """Set center crop position on the input."""
         self._center = set
         if self._center is not None:
             self._center = np.asarray(set)
@@ -87,7 +106,7 @@ class Crop(object):
         return out_array.astype(arr.dtype)
 
     def enable_mouse_control(self):
-        """Move the mouse to move where the crop is from on the original image"""
+        """Move the mouse to move where the crop is from on the original image."""
 
         @mouse_loop
         def m_loop(me):

@@ -1,3 +1,5 @@
+"""Allow OpenCV to handle numpy arrays as input."""
+
 import numpy as np
 import cv2
 
@@ -6,6 +8,7 @@ class NpCam(object):
     """Add OpenCV camera controls to a numpy array."""
 
     def __init__(self, img):
+        """Create a fake camera for OpenCV based on the initial array."""
         assert isinstance(img, np.ndarray)
         self.__img = img
         self.__is_opened = True
