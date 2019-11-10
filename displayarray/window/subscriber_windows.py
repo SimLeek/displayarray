@@ -85,9 +85,7 @@ class SubscriberWindows(object):
         for c in self.source_names:
             subscriber_dictionary.stop_cam(c)
 
-    def handle_keys(
-        self, key_input  # type: int
-    ):
+    def handle_keys(self, key_input: int):
         """Capture key input for the escape function and passing to key control subscriber threads."""
         if key_input in self.ESC_KEY_CODES:
             for name in self.window_names:

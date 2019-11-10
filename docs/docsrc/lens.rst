@@ -6,9 +6,6 @@ displayarray.effects.lens
 .. automodule:: displayarray.effects.lens
    :members:
 
-.. autoclass:: ControllableLens
-    :members:
-
 .. autoclass:: Barrel
     :members:
 
