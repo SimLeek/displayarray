@@ -5,7 +5,7 @@ description = 'Tool for displaying numpy arrays.'
 authors = ['SimLeek <simulator.leek@gmail.com>']
 license = 'MIT'
 readme = "README.rst"
-repository = "https://github.com/sdispater/poetry"
+repository = "https://github.com/simleek/displayarray"
 
 [tool.poetry.dependencies]
 python = "^3.6"

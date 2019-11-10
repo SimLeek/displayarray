@@ -110,7 +110,9 @@ universal wheel in Python 3.6+ and PyPy.
 Usage
 -----
 
-See tests for more example code. API will be generated soon.
+API has been generated `here <https://simleek.github.io/displayarray/index.html>`_.
+
+See tests and examples for example usage.
 
 License
 -------
