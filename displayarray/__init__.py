@@ -4,7 +4,7 @@ Display any array, webcam, or video file.
 display is a function that displays these in their own windows.
 """
 
-__version__ = "0.6.6"
+__version__ = "0.7.1"
 
 from .window.subscriber_windows import display, breakpoint_display
 from .frame.frame_updater import read_updates

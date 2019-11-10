@@ -1,6 +1,6 @@
 [tool.poetry]
 name = 'displayarray'
-version = '0.7.0'
+version = '0.7.1'
 description = 'Tool for displaying numpy arrays.'
 authors = ['SimLeek <simulator.leek@gmail.com>']
 license = 'MIT'
