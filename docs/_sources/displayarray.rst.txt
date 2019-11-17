@@ -10,3 +10,12 @@ Display
 Frames
 ------
 .. autofunction:: read_updates
+
+Effects
+-------
+.. autoclass:: displayarray.effects.crop.Crop
+    :members:
+.. autoclass:: displayarray.effects.lens.Barrel
+    :members:
+.. autoclass:: displayarray.effects.select_channels.SelectChannels
+    :members:

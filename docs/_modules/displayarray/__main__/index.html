@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>displayarray.__main__ &#8212; DisplayArray  documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex/" />
+    <link rel="search" title="Search" href="../../../search/" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for displayarray.__main__</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">DisplayArray.</span>
+
+<span class="sd">Display NumPy arrays.</span>
+
+<span class="sd">Usage:</span>
+<span class="sd">  displayarray (-w &lt;webcam-number&gt; | -v &lt;video-filename&gt; | -t &lt;topic-name&gt;[,dtype])... [-m &lt;msg-backend&gt;]</span>
+<span class="sd">  displayarray -h</span>
+<span class="sd">  displayarray --version</span>
+
+
+<span class="sd">Options:</span>
+<span class="sd">  -h, --help                                           Show this help text.</span>
+<span class="sd">  --version                                            Show version number.</span>
+<span class="sd">  -w &lt;webcam-number&gt;, --webcam=&lt;webcam-number&gt;         Display video from a webcam.</span>
+<span class="sd">  -v &lt;video-filename&gt;, --video=&lt;video-filename&gt;        Display frames from a video file.</span>
+<span class="sd">  -t &lt;topic-name&gt;, --topic=&lt;topic-name&gt;                Display frames from a topic using the chosen message broker.</span>
+<span class="sd">  -m &lt;msg-backend&gt;, --message-backend &lt;msg-backend&gt;    Choose message broker backend. [Default: ROS]</span>
+<span class="sd">                                                       Currently supported: ROS, ZeroMQ</span>
+<span class="sd">  --ros                                                Use ROS as the backend message broker.</span>
+<span class="sd">  --zeromq                                             Use ZeroMQ as the backend message broker.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">docopt</span> <span class="k">import</span> <span class="n">docopt</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../../displayarray_bash/#displayarray.__main__.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Process command line arguments.&quot;&quot;&quot;</span>
+    <span class="n">arguments</span> <span class="o">=</span> <span class="n">docopt</span><span class="p">(</span><span class="vm">__doc__</span><span class="p">,</span> <span class="n">argv</span><span class="o">=</span><span class="n">argv</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;--version&quot;</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">displayarray</span> <span class="k">import</span> <span class="n">__version__</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;DisplayArray V</span><span class="si">{__version__}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="kn">from</span> <span class="nn">displayarray</span> <span class="k">import</span> <span class="n">display</span>
+
+    <span class="n">vids</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;--webcam&quot;</span><span class="p">]]</span> <span class="o">+</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;--video&quot;</span><span class="p">]</span>
+    <span class="n">v_disps</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">vids</span><span class="p">:</span>
+        <span class="n">v_disps</span> <span class="o">=</span> <span class="n">display</span><span class="p">(</span><span class="o">*</span><span class="n">vids</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">displayarray.frame.frame_updater</span> <span class="k">import</span> <span class="n">read_updates_ros</span><span class="p">,</span> <span class="n">read_updates_zero_mq</span>
+
+    <span class="n">topics</span> <span class="o">=</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;--topic&quot;</span><span class="p">]</span>
+    <span class="n">topics_split</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">topics</span><span class="p">]</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">display</span><span class="p">()</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">msg_recv</span><span class="p">():</span>
+        <span class="k">nonlocal</span> <span class="n">d</span>
+        <span class="k">while</span> <span class="n">d</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;--message-backend&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ROS&quot;</span><span class="p">:</span>
+                <span class="k">async</span> <span class="k">for</span> <span class="n">v_name</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">read_updates_ros</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">topics_split</span><span class="p">],</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">topics_split</span><span class="p">]</span>
+                <span class="p">):</span>
+                    <span class="n">d</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">frame</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">v_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">arguments</span><span class="p">[</span><span class="s2">&quot;--message-backend&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;ZeroMQ&quot;</span><span class="p">:</span>
+                <span class="k">async</span> <span class="k">for</span> <span class="n">v_name</span><span class="p">,</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">read_updates_zero_mq</span><span class="p">(</span>
+                    <span class="o">*</span><span class="p">[</span><span class="nb">bytes</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;ascii&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">topics</span><span class="p">]</span>
+                <span class="p">):</span>
+                    <span class="n">d</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">arr</span><span class="o">=</span><span class="n">frame</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">v_name</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">update_vids</span><span class="p">():</span>
+        <span class="k">while</span> <span class="n">v_disps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">v_disps</span><span class="p">:</span>
+                <span class="n">v_disps</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">runner</span><span class="p">():</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">wait</span><span class="p">([</span><span class="n">msg_recv</span><span class="p">(),</span> <span class="n">update_vids</span><span class="p">()])</span>
+
+    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+    <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">runner</span><span class="p">())</span>
+    <span class="n">loop</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../">DisplayArray</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Python API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../frame/">frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../effects/">effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../input/">input</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Bash API</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../displayarray_bash/">displayarray</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../">Documentation overview</a><ul>
+  <li><a href="../../">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search/" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, Simulator Leek.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -15,7 +15,7 @@
     <link rel="index" title="Index" href="../genindex/" />
     <link rel="search" title="Search" href="../search/" />
     <link rel="next" title="displayarray cli" href="../displayarray_bash/" />
-    <link rel="prev" title="displayarray.window" href="../window/" />
+    <link rel="prev" title="displayarray.effects" href="../effects/" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -38,8 +38,13 @@
 <h2>Mouse Input<a class="headerlink" href="#mouse-input" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="displayarray.input.mouse_loop">
-<em class="property">class </em><code class="sig-name descname">mouse_loop</code><span class="sig-paren">(</span><em class="sig-param">f</em>, <em class="sig-param">run_when_no_events=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/input/#mouse_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.input.mouse_loop" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">mouse_loop</code><span class="sig-paren">(</span><em class="sig-param">f</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/input/#mouse_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.input.mouse_loop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run a function on mouse information that is received by the window, continuously in a new thread.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@mouse_loop</span>
+<span class="gp">... </span><span class="k">def</span> <span class="nf">fun</span><span class="p">(</span><span class="n">mouse_event</span><span class="p">):</span>
+<span class="gp">... </span>  <span class="k">print</span><span class="p">(</span><span class="s2">&quot;x:{}, y:{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mouse_event</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">mouse_event</span><span class="o">.</span><span class="n">y</span><span class="p">))</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="class">
@@ -53,8 +58,13 @@
 <h2>Key Input<a class="headerlink" href="#key-input" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="displayarray.input.key_loop">
-<em class="property">class </em><code class="sig-name descname">key_loop</code><span class="sig-paren">(</span><em class="sig-param">f: Callable[[str], None], run_when_no_events=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/input/#key_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.input.key_loop" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">key_loop</code><span class="sig-paren">(</span><em class="sig-param">f: Callable[[str], None]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/input/#key_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.input.key_loop" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run a function on mouse information that is received by the window, continuously in a new thread.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@key_loop</span>
+<span class="gp">... </span><span class="k">def</span> <span class="nf">fun</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+<span class="gp">... </span>  <span class="k">print</span><span class="p">(</span><span class="s2">&quot;key pressed:{}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </div>
@@ -79,13 +89,10 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../lens/">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../frame/">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../window/">displayarray.window</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">displayarray.input</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../frame/">frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../effects/">effects</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">input</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#mouse-input">Mouse Input</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#key-input">Key Input</a></li>
 </ul>
@@ -100,7 +107,7 @@
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../">Documentation overview</a><ul>
-      <li>Previous: <a href="../window/" title="previous chapter">displayarray.window</a></li>
+      <li>Previous: <a href="../effects/" title="previous chapter">displayarray.effects</a></li>
       <li>Next: <a href="../displayarray_bash/" title="next chapter">displayarray cli</a></li>
   </ul></li>
 </ul>

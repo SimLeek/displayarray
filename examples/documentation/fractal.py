@@ -10,17 +10,19 @@ def mandel(
 
     source: https://thesamovar.wordpress.com/2009/03/22/fast-fractals-with-python-and-numpy/
 
-    >>> img = mandel()
-    >>> center = (0, -1.78)
-    >>> length = 3.2
-    >>> d = display(img)
-    >>> while d:
-    ...   length*=.9
-    ...   y_min = center[1]-length/2.0
-    ...   y_max = center[1]+length/2.0
-    ...   x_min = center[0]-length/2.0
-    ...   x_max = center[0]+length/2.0
-    ...   img[...] = mandel(y_min=y_min, y_max=y_max, x_min=x_min, x_max=x_max)
+    .. code-block:: python
+
+      >>> img = mandel()
+      >>> center = (0, -1.78)
+      >>> length = 3.2
+      >>> d = display(img)
+      >>> while d:
+      ...   length*=.9
+      ...   y_min = center[1]-length/2.0
+      ...   y_max = center[1]+length/2.0
+      ...   x_min = center[0]-length/2.0
+      ...   x_max = center[0]+length/2.0
+      ...   img[...] = mandel(y_min=y_min, y_max=y_max, x_min=x_min, x_max=x_max)
     """
 
     ix, iy = np.mgrid[0:height, 0:width]

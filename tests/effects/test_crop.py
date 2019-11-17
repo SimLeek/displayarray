@@ -8,7 +8,7 @@ def test_init_defaults():
     c = crop.Crop()
 
     assert np.all(c.output_size == (64, 64, 3))
-    assert c.center is None
+    assert all(c.center == [32, 32, 1])
     assert c.odd_center is None
     assert c.input_size is None
 
@@ -16,7 +16,7 @@ def test_init_defaults():
 def test_init():
     c = crop.Crop((32, 32, 3), (16, 16, 1))
 
-    c(np.ndarray((64,64,3)))
+    c(np.ndarray((64, 64, 3)))
 
     assert np.all(c.output_size == (32, 32, 3))
     assert np.all(c.center == (16, 16, 1))

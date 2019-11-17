@@ -173,6 +173,7 @@ class SubscriberWindows(object):
                         if frame is not None:
                             self.frames[-1] = frame
                 self.__check_too_many_channels()
+                self.FRAME_DICT[self.input_vid_global_names[i]] = NoData()
         self._display_frames(self.frames)
 
     def update(self, arr: np.ndarray = None, id: str = None):

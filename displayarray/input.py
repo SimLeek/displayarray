@@ -68,9 +68,11 @@ class mouse_loop(object):  # NOSONAR
     """
     Run a function on mouse information that is received by the window, continuously in a new thread.
 
-    >>> @mouse_loop
-    ... def fun(mouse_event):
-    ...   print("x:{}, y:{}".format(mouse_event.x, mouse_event.y))
+    .. code-block:: python
+
+      >>> @mouse_loop
+      ... def fun(mouse_event):
+      ...   print("x:{}, y:{}".format(mouse_event.x, mouse_event.y))
     """
 
     def __init__(self, f):
@@ -126,9 +128,11 @@ class key_loop(object):  # NOSONAR
     """
     Run a function on mouse information that is received by the window, continuously in a new thread.
 
-    >>> @key_loop
-    ... def fun(key):
-    ...   print("key pressed:{}".format(key))
+    .. code-block:: python
+
+      >>> @key_loop
+      ... def fun(key):
+      ...   print("key pressed:{}".format(key))
     """
 
     def __init__(self, f: Callable[[str], None]):

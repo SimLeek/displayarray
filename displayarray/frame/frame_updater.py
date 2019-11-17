@@ -48,7 +48,7 @@ class FrameUpdater(threading.Thread):
             continue
 
     def __apply_callbacks_to_frame(self, frame):
-        if frame is not None:
+        if frame is not None and not isinstance(frame, NoData):
             try:
                 for c in self.callbacks:
                     frame_c = c(frame)
@@ -133,10 +133,13 @@ async def read_updates(
     Read back all updates from the requested videos.
 
     Example usage:
-    >>> from examples.videos import test_video
-    >>> f = 0
-    >>> for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
-    ...   print(f"Frame:{f}. Array:{r}")
+
+    .. code-block:: python
+
+      >>> from examples.videos import test_video
+      >>> f = 0
+      >>> for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
+      ...   print(f"Frame:{f}. Array:{r}")
 
     """
     from displayarray.window import SubscriberWindows
