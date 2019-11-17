@@ -1,28 +1,21 @@
 """Crop any n-dimensional array."""
 
 import numpy as np
-from displayarray.input import mouse_loop
+from ..input import mouse_loop
 
 
 class Crop(object):
-    """
-    A callback class that will return the input array cropped to the output size. N-dimensional.
-
-    >>> crop_it = Crop((2,2,2))
-    >>> arr = np.ones((4,4,4))
-    >>> crop_it(arr)
-    array([[[1., 1.],
-            [1., 1.]],
-    <BLANKLINE>
-           [[1., 1.],
-            [1., 1.]]])
-
-    """
+    """A callback class that will return the input array cropped to the output size. N-dimensional."""
 
     def __init__(self, output_size=(64, 64, 3), center=None):
-        """Create the cropper."""
+        """
+        Create the cropping callback class.
+
+        :param output_size: Specified the size the input should be cropped to. Can be redefined later.
+        :param center: Specifies the center on the input array to take the crop out of.
+        """
         self._output_size = None
-        self._center = None
+        self._center = np.asarray([o // 2 for o in output_size])
         self.odd_center = None
         self.mouse_control = None
         self.input_size = None
@@ -32,27 +25,27 @@ class Crop(object):
 
     @property
     def output_size(self):
-        """Get the output size after cropping."""
+        """Get the output size."""
         return self._output_size
 
     @output_size.setter
     def output_size(self, set):
-        """Set what the output size will be after cropping."""
+        """Set the output size."""
         self._output_size = set
         if self._output_size is not None:
             self._output_size = np.asarray(set)
 
     @property
     def center(self):
-        """Get center crop position on the input."""
+        """Get the center."""
         return self._center
 
     @center.setter
     def center(self, set):
-        """Set center crop position on the input."""
-        self._center = set
-        if self._center is not None:
-            self._center = np.asarray(set)
+        """Set the center. Guarded so that colors need not be set."""
+        if set is not None:
+            for x in range(len(set)):
+                self._center[x] = set[x]
 
     def __call__(self, arr):
         """Crop the input array to the specified output size. output is centered on self.center point on input."""

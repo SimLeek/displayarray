@@ -31,7 +31,9 @@
           <div class="body" role="main">
             
   <h1>Source code for displayarray.frame.np_to_opencv</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="sd">&quot;&quot;&quot;Allow OpenCV to handle numpy arrays as input.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">cv2</span>
 
 
@@ -39,12 +41,18 @@
     <span class="sd">&quot;&quot;&quot;Add OpenCV camera controls to a numpy array.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">img</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a fake camera for OpenCV based on the initial array.&quot;&quot;&quot;</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__img</span> <span class="o">=</span> <span class="n">img</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__is_opened</span> <span class="o">=</span> <span class="kc">True</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">__width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__height</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__height</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__ratio</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__width</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__height</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">__wait_for_ratio</span> <span class="o">=</span> <span class="kc">False</span>
@@ -105,13 +113,10 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../lens/">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../window/">displayarray.window</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../input/">displayarray.input</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../effects/">effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../input/">input</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Bash API</span></p>
 <ul>

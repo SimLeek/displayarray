@@ -31,7 +31,8 @@
           <div class="body" role="main">
             
   <h1>Source code for displayarray.frame.frame_publishing</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span></span><span class="sd">&quot;&quot;&quot;Publish frames so any function within this program can find them.&quot;&quot;&quot;</span>
+
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">asyncio</span>
@@ -41,7 +42,7 @@
 
 <span class="kn">from</span> <span class="nn">displayarray.frame</span> <span class="k">import</span> <span class="n">subscriber_dictionary</span>
 <span class="kn">from</span> <span class="nn">.np_to_opencv</span> <span class="k">import</span> <span class="n">NpCam</span>
-<span class="kn">from</span> <span class="nn">displayarray.uid</span> <span class="k">import</span> <span class="n">uid_for_source</span>
+<span class="kn">from</span> <span class="nn">displayarray._uid</span> <span class="k">import</span> <span class="n">uid_for_source</span>
 
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Callable</span>
 
@@ -146,6 +147,7 @@
     <span class="n">copy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">track</span><span class="o">=</span><span class="kc">False</span>
 <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Publish frames to ZeroMQ when they&#39;re updated.&quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">zmq</span>
     <span class="kn">from</span> <span class="nn">displayarray</span> <span class="k">import</span> <span class="n">read_updates</span>
 
@@ -193,6 +195,7 @@
     <span class="n">rate_hz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">dtype</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Publish frames to ROS when they&#39;re updated.&quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">rospy</span>
     <span class="kn">from</span> <span class="nn">rospy.numpy_msg</span> <span class="k">import</span> <span class="n">numpy_msg</span>
     <span class="kn">import</span> <span class="nn">std_msgs.msg</span>
@@ -220,7 +223,7 @@
             <span class="p">)</span>  <span class="c1"># allow users to use their own custom messages in numpy arrays</span>
         <span class="k">return</span> <span class="n">msg_type</span>
 
-    <span class="n">publishers</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">publishers</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">rospy</span><span class="o">.</span><span class="n">Publisher</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">rospy</span><span class="o">.</span><span class="n">init_node</span><span class="p">(</span><span class="n">node_name</span><span class="p">,</span> <span class="n">anonymous</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">read_updates</span><span class="p">(</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="p">,</span> <span class="n">fps_limit</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">end_callback</span><span class="p">,</span> <span class="n">blocking</span><span class="p">):</span>
@@ -268,13 +271,10 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../lens/">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../window/">displayarray.window</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../input/">displayarray.input</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../effects/">effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../input/">input</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Bash API</span></p>
 <ul>

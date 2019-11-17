@@ -14,8 +14,8 @@
     <script type="text/javascript" src="../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../genindex/" />
     <link rel="search" title="Search" href="../search/" />
-    <link rel="next" title="displayarray.window" href="../window/" />
-    <link rel="prev" title="displayarray.effects.select_channels" href="../select_channels/" />
+    <link rel="next" title="displayarray.effects" href="../effects/" />
+    <link rel="prev" title="displayarray.display" href="../display/" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -32,8 +32,26 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="module-displayarray.frame">
-<span id="displayarray-frame"></span><h1>displayarray.frame<a class="headerlink" href="#module-displayarray.frame" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="displayarray-frame">
+<h1>displayarray.frame<a class="headerlink" href="#displayarray-frame" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="read-updates">
+<h2>Read Updates<a class="headerlink" href="#read-updates" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="displayarray.read_updates">
+<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.read_updates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read back all updates from the requested videos.</p>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">examples.videos</span> <span class="kn">import</span> <span class="n">test_video</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">read_updates</span><span class="p">(</span><span class="n">test_video</span><span class="p">,</span> <span class="n">end_callback</span><span class="o">=</span><span class="k">lambda</span> <span class="p">:</span><span class="n">f</span><span class="o">==</span><span class="mi">2</span><span class="p">)):</span>
+<span class="gp">... </span>  <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Frame:{f}. Array:{r}&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="module-displayarray.frame">
+<span id="frame-passing"></span><h2>Frame Passing<a class="headerlink" href="#module-displayarray.frame" title="Permalink to this headline">¶</a></h2>
 <p>Handles publishing arrays, videos, and cameras.</p>
 <p>CamCtrl handles sending and receiving commands to specific camera (or array/video) publishers
 VideoHandlerThread updates the frames for the global displayer, since OpenCV can only update on the main thread
@@ -66,13 +84,15 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 
 <dl class="function">
 <dt id="displayarray.frame.read_updates">
-<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Callable[[numpy.ndarray], Optional[numpy.ndarray]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.read_updates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reads back all updates from the requested videos.</p>
-<p>Example usage:
-&gt;&gt;&gt; from examples.videos import test_video
-&gt;&gt;&gt; f = 0
-&gt;&gt;&gt; for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
-…   print(f”Frame:{f}. Array:{r}”)</p>
+<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.read_updates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read back all updates from the requested videos.</p>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">examples.videos</span> <span class="kn">import</span> <span class="n">test_video</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">read_updates</span><span class="p">(</span><span class="n">test_video</span><span class="p">,</span> <span class="n">end_callback</span><span class="o">=</span><span class="k">lambda</span> <span class="p">:</span><span class="n">f</span><span class="o">==</span><span class="mi">2</span><span class="p">)):</span>
+<span class="gp">... </span>  <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Frame:{f}. Array:{r}&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="function">
@@ -124,6 +144,7 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 </dd></dl>
 
 </div>
+</div>
 
 
           </div>
@@ -144,13 +165,14 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../lens/">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../window/">displayarray.window</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../input/">displayarray.input</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../display/">display</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">frame</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#read-updates">Read Updates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-displayarray.frame">Frame Passing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../effects/">effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input/">input</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Bash API</span></p>
 <ul>
@@ -161,8 +183,8 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../">Documentation overview</a><ul>
-      <li>Previous: <a href="../select_channels/" title="previous chapter">displayarray.effects.select_channels</a></li>
-      <li>Next: <a href="../window/" title="next chapter">displayarray.window</a></li>
+      <li>Previous: <a href="../display/" title="previous chapter">displayarray.display</a></li>
+      <li>Next: <a href="../effects/" title="next chapter">displayarray.effects</a></li>
   </ul></li>
 </ul>
 </div>

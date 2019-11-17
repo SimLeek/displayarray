@@ -12,9 +12,14 @@ class NpCam(object):
         assert isinstance(img, np.ndarray)
         self.__img = img
         self.__is_opened = True
-
-        self.__width = self.__img.shape[1]
-        self.__height = self.__img.shape[0]
+        if len(img.shape) > 0:
+            self.__height = self.__img.shape[0]
+            if len(self.__img.shape) > 1:
+                self.__width = self.__img.shape[1]
+            else:
+                self.__width = self.__height
+        else:
+            self.__width = self.__height = 1
         self.__ratio = float(self.__width) / self.__height
 
         self.__wait_for_ratio = False

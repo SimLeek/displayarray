@@ -31,16 +31,24 @@
           <div class="body" role="main">
             
   <h1>Source code for displayarray.effects.crop</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="sd">&quot;&quot;&quot;Crop any n-dimensional array.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">..input</span> <span class="k">import</span> <span class="n">mouse_loop</span>
 
 
-<div class="viewcode-block" id="Crop"><a class="viewcode-back" href="../../../../crop/#displayarray.effects.crop.Crop">[docs]</a><span class="k">class</span> <span class="nc">Crop</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Crop"><a class="viewcode-back" href="../../../../effects/#displayarray.effects.crop.Crop">[docs]</a><span class="k">class</span> <span class="nc">Crop</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A callback class that will return the input array cropped to the output size. N-dimensional.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_size</span><span class="o">=</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">center</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the cropping callback class.</span>
+
+<span class="sd">        :param output_size: Specified the size the input should be cropped to. Can be redefined later.</span>
+<span class="sd">        :param center: Specifies the center on the input array to take the crop out of.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">o</span> <span class="o">//</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">output_size</span><span class="p">])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">odd_center</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mouse_control</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">input_size</span> <span class="o">=</span> <span class="kc">None</span>
@@ -50,23 +58,27 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the output size.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span>
 
     <span class="nd">@output_size</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the output size.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span> <span class="o">=</span> <span class="nb">set</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the center.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_center</span>
 
     <span class="nd">@center</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span> <span class="nf">center</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="o">=</span> <span class="nb">set</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;Set the center. Guarded so that colors need not be set.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">set</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_center</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Crop the input array to the specified output size. output is centered on self.center point on input.&quot;&quot;&quot;</span>
@@ -119,8 +131,8 @@
         <span class="n">out_array</span><span class="p">[</span><span class="n">put_slices</span><span class="p">]</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="n">get_slices</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">out_array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">arr</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Crop.enable_mouse_control"><a class="viewcode-back" href="../../../../crop/#displayarray.effects.crop.Crop.enable_mouse_control">[docs]</a>    <span class="k">def</span> <span class="nf">enable_mouse_control</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Move the mouse to move where the crop is from on the original image&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Crop.enable_mouse_control"><a class="viewcode-back" href="../../../../effects/#displayarray.effects.crop.Crop.enable_mouse_control">[docs]</a>    <span class="k">def</span> <span class="nf">enable_mouse_control</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Move the mouse to move where the crop is from on the original image.&quot;&quot;&quot;</span>
 
         <span class="nd">@mouse_loop</span>
         <span class="k">def</span> <span class="nf">m_loop</span><span class="p">(</span><span class="n">me</span><span class="p">):</span>
@@ -154,13 +166,10 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../lens/">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../window/">displayarray.window</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../input/">displayarray.input</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../effects/">effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../input/">input</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Bash API</span></p>
 <ul>

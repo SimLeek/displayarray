@@ -24,13 +24,15 @@ class function_display_callback(object):  # NOSONAR
     """
     Used for running arbitrary functions on pixels.
 
-    >>> import random
-    >>> from displayarray.frame import FrameUpdater
-    >>> img = np.zeros((300, 300, 3))
-    >>> def fun(array, coords, finished):
-    ...     r,g,b = random.random()/20.0, random.random()/20.0, random.random()/20.0
-    ...     array[coords[0:2]] = (array[coords[0:2]] + [r,g,b])%1.0
-    >>> FrameUpdater(video_source=img, callbacks=function_display_callback(fun)).display()
+    .. code-block:: python
+
+      >>> import random
+      >>> from displayarray.frame import FrameUpdater
+      >>> img = np.zeros((300, 300, 3))
+      >>> def fun(array, coords, finished):
+      ...     r,g,b = random.random()/20.0, random.random()/20.0, random.random()/20.0
+      ...     array[coords[0:2]] = (array[coords[0:2]] + [r,g,b])%1.0
+      >>> FrameUpdater(video_source=img, callbacks=function_display_callback(fun)).display()
 
     :param display_function: a function to run on the input image.
     :param finish_function: a function to run on the input image when the other function finishes.

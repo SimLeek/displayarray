@@ -1,6 +1,14 @@
 displayarray.frame
 ===================================
 
+Read Updates
+------------
+.. currentmodule:: displayarray
+
+.. autofunction:: read_updates
+
+Frame Passing
+-------------
 .. currentmodule:: displayarray.frame
 
 .. automodule:: displayarray.frame

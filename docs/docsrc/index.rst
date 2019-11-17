@@ -14,13 +14,10 @@ DisplayArray displays arrays.
    :maxdepth: 3
    :caption: Python API
 
-   displayarray
-   displayarray.effects.crop <crop>
-   displayarray.effects.lens <lens>
-   displayarray.effects.select_channels <select_channels>
-   displayarray.frame <frame>
-   displayarray.window <window>
-   displayarray.input <input>
+   display <display>
+   frame <frame>
+   effects <effects>
+   input <input>
 
 .. toctree::
    :maxdepth: 2

@@ -31,13 +31,24 @@
           <div class="body" role="main">
             
   <h1>Source code for displayarray.effects.select_channels</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="sd">&quot;&quot;&quot;Reduce many color images to the three colors that your eyeballs can see.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">..input</span> <span class="k">import</span> <span class="n">mouse_loop</span>
 <span class="kn">import</span> <span class="nn">cv2</span>
 
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Iterable</span>
 
-<div class="viewcode-block" id="SelectChannels"><a class="viewcode-back" href="../../../../select_channels/#displayarray.effects.select_channels.SelectChannels">[docs]</a><span class="k">class</span> <span class="nc">SelectChannels</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_channels</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+<div class="viewcode-block" id="SelectChannels"><a class="viewcode-back" href="../../../../effects/#displayarray.effects.select_channels.SelectChannels">[docs]</a><span class="k">class</span> <span class="nc">SelectChannels</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Select channels to display from an array with too many colors.</span>
+
+<span class="sd">    :param selected_channels: the list of channels to display.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_channels</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Select which channels from the input array to display in the output.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">selected_channels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">selected_channels</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">=</span> <span class="n">selected_channels</span>
@@ -46,6 +57,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">num_input_channels</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run the channel selector.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_input_channels</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">out_arr</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">arr</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">x</span><span class="p">),</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span>
@@ -53,7 +65,15 @@
         <span class="n">out_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">out_arr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out_arr</span>
 
-    <span class="k">def</span> <span class="nf">enable_mouse_control</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SelectChannels.enable_mouse_control"><a class="viewcode-back" href="../../../../effects/#displayarray.effects.select_channels.SelectChannels.enable_mouse_control">[docs]</a>    <span class="k">def</span> <span class="nf">enable_mouse_control</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Enable mouse control.</span>
+
+<span class="sd">        Alt+Scroll to increase/decrease channel 2.</span>
+<span class="sd">        Shift+Scroll to increase/decrease channel 1.</span>
+<span class="sd">        Ctrl+scroll to increase/decrease channel 0.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="nd">@mouse_loop</span>
         <span class="k">def</span> <span class="nf">m_loop</span><span class="p">(</span><span class="n">me</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">me</span><span class="o">.</span><span class="n">event</span> <span class="o">==</span> <span class="n">cv2</span><span class="o">.</span><span class="n">EVENT_MOUSEWHEEL</span><span class="p">:</span>
@@ -91,7 +111,7 @@
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mouse_print_channels</span><span class="p">:</span>
                         <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Channel 2 now maps to </span><span class="si">{self.selected_channels[2]}</span><span class="s2">.&quot;</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">mouse_control</span> <span class="o">=</span> <span class="n">m_loop</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mouse_control</span> <span class="o">=</span> <span class="n">m_loop</span></div></div>
 </pre></div>
 
           </div>
@@ -112,13 +132,10 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../lens/">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../window/">displayarray.window</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../../input/">displayarray.input</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../frame/">frame</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../effects/">effects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../input/">input</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Bash API</span></p>
 <ul>

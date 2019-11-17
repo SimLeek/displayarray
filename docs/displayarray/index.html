@@ -14,7 +14,6 @@
     <script type="text/javascript" src="../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../genindex/" />
     <link rel="search" title="Search" href="../search/" />
-    <link rel="next" title="displayarray.effects.crop" href="../crop/" />
     <link rel="prev" title="DisplayArray Documentation" href="../" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -40,7 +39,7 @@
 <h2>Display<a class="headerlink" href="#display" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="displayarray.display">
-<code class="sig-name descname">display</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Callable[[numpy.ndarray], Optional[numpy.ndarray]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, window_names=None, blocking=False, fps_limit=240, size=(-1, -1)</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.display" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">display</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, window_names=None, blocking=False, fps_limit=240, size=(-1, -1)</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.display" title="Permalink to this definition">¶</a></dt>
 <dd><p>Display all the arrays, cameras, and videos passed in.</p>
 <dl class="simple">
 <dt>callbacks can be a dictionary linking functions to videos, or a list of function or functions operating on the video</dt><dd><p>data before displaying.</p>
@@ -60,13 +59,93 @@
 <h2>Frames<a class="headerlink" href="#frames" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="displayarray.read_updates">
-<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Callable[[numpy.ndarray], Optional[numpy.ndarray]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.read_updates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reads back all updates from the requested videos.</p>
+<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.read_updates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read back all updates from the requested videos.</p>
 <p>Example usage:
 &gt;&gt;&gt; from examples.videos import test_video
 &gt;&gt;&gt; f = 0
 &gt;&gt;&gt; for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
 …   print(f”Frame:{f}. Array:{r}”)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="effects">
+<h2>Effects<a class="headerlink" href="#effects" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="displayarray.effects.crop.Crop">
+<em class="property">class </em><code class="sig-name descname">Crop</code><span class="sig-paren">(</span><em class="sig-param">output_size=(64</em>, <em class="sig-param">64</em>, <em class="sig-param">3)</em>, <em class="sig-param">center=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/crop/#Crop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.crop.Crop" title="Permalink to this definition">¶</a></dt>
+<dd><p>A callback class that will return the input array cropped to the output size. N-dimensional.</p>
+<dl class="method">
+<dt id="displayarray.effects.crop.Crop.center">
+<em class="property">property </em><code class="sig-name descname">center</code><a class="headerlink" href="#displayarray.effects.crop.Crop.center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the center.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.crop.Crop.enable_mouse_control">
+<code class="sig-name descname">enable_mouse_control</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/crop/#Crop.enable_mouse_control"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.crop.Crop.enable_mouse_control" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the mouse to move where the crop is from on the original image.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.crop.Crop.output_size">
+<em class="property">property </em><code class="sig-name descname">output_size</code><a class="headerlink" href="#displayarray.effects.crop.Crop.output_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the output size.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="displayarray.effects.lens.Barrel">
+<em class="property">class </em><code class="sig-name descname">Barrel</code><span class="sig-paren">(</span><em class="sig-param">use_bleed=False</em>, <em class="sig-param">barrel_power=1</em>, <em class="sig-param">pincushion_power=1</em>, <em class="sig-param">zoom=1</em>, <em class="sig-param">center=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/lens/#Barrel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.lens.Barrel" title="Permalink to this definition">¶</a></dt>
+<dd><p>A barrel lens distortion callback.</p>
+<dl class="method">
+<dt id="displayarray.effects.lens.Barrel.barrel_power">
+<em class="property">property </em><code class="sig-name descname">barrel_power</code><a class="headerlink" href="#displayarray.effects.lens.Barrel.barrel_power" title="Permalink to this definition">¶</a></dt>
+<dd><p>Guarded barrel power. Avoids divide by zero conditions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.lens.Barrel.center">
+<em class="property">property </em><code class="sig-name descname">center</code><a class="headerlink" href="#displayarray.effects.lens.Barrel.center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Guarded get center. Limits to within input.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.lens.Barrel.enable_mouse_control">
+<code class="sig-name descname">enable_mouse_control</code><span class="sig-paren">(</span><em class="sig-param">crop_size=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/lens/#Barrel.enable_mouse_control"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.lens.Barrel.enable_mouse_control" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable the default mouse controls.</p>
+<p>Move the mouse to center the image
+scroll to increase/decrease barrel
+ctrl+scroll to increase/decrease zoom</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.lens.Barrel.zoom">
+<em class="property">property </em><code class="sig-name descname">zoom</code><a class="headerlink" href="#displayarray.effects.lens.Barrel.zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Guarded zoom. Avoids divide by zero conditions.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="displayarray.effects.select_channels.SelectChannels">
+<em class="property">class </em><code class="sig-name descname">SelectChannels</code><span class="sig-paren">(</span><em class="sig-param">selected_channels: Iterable[int] = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/select_channels/#SelectChannels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.select_channels.SelectChannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select channels to display from an array with too many colors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>selected_channels</strong> – the list of channels to display.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="displayarray.effects.select_channels.SelectChannels.enable_mouse_control">
+<code class="sig-name descname">enable_mouse_control</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/select_channels/#SelectChannels.enable_mouse_control"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.select_channels.SelectChannels.enable_mouse_control" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable mouse control.</p>
+<p>Alt+Scroll to increase/decrease channel 2.
+Shift+Scroll to increase/decrease channel 1.
+Ctrl+scroll to increase/decrease channel 0.</p>
+</dd></dl>
+
 </dd></dl>
 
 </div>
@@ -94,9 +173,9 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">displayarray</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#display">Display</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#frames">Frames</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#effects">Effects</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../crop/">displayarray.effects.crop</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../lens/">displayarray.effects.lens</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../select_channels/">displayarray.effects.select_channels</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../frame/">displayarray.frame</a></li>
@@ -113,7 +192,6 @@
 <ul>
   <li><a href="../">Documentation overview</a><ul>
       <li>Previous: <a href="../" title="previous chapter">DisplayArray Documentation</a></li>
-      <li>Next: <a href="../crop/" title="next chapter">displayarray.effects.crop</a></li>
   </ul></li>
 </ul>
 </div>

@@ -6,10 +6,11 @@ from examples.videos import test_video
 
 d = (
     display(test_video)
-    .add_callback(crop.Crop())
-    .add_callback(lens.Barrel().enable_mouse_control())
+    .add_callback(lens.BarrelPyTorch().enable_mouse_control(crop_size=(256, 256)))
+    .add_callback(crop.Crop(output_size=(256, 256, 3)))
     .wait_for_init()
 )
 
 while d:
-    print(d.frames[0].shape)
+    if len(d.frames) > 0:
+        pass

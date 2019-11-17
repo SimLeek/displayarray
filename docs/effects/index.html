@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>displayarray.effects.lens &#8212; DisplayArray  documentation</title>
+    <title>displayarray.effects &#8212; DisplayArray  documentation</title>
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
@@ -14,8 +14,8 @@
     <script type="text/javascript" src="../_static/language_data.js"></script>
     <link rel="index" title="Index" href="../genindex/" />
     <link rel="search" title="Search" href="../search/" />
-    <link rel="next" title="displayarray.effects.select_channels" href="../select_channels/" />
-    <link rel="prev" title="displayarray.effects.crop" href="../crop/" />
+    <link rel="next" title="displayarray.input" href="../input/" />
+    <link rel="prev" title="displayarray.frame" href="../frame/" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -32,8 +32,37 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="module-displayarray.effects.lens">
-<span id="displayarray-effects-lens"></span><h1>displayarray.effects.lens<a class="headerlink" href="#module-displayarray.effects.lens" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="displayarray-effects">
+<h1>displayarray.effects<a class="headerlink" href="#displayarray-effects" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="crop">
+<h2>Crop<a class="headerlink" href="#crop" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="displayarray.effects.crop.Crop">
+<em class="property">class </em><code class="sig-name descname">Crop</code><span class="sig-paren">(</span><em class="sig-param">output_size=(64</em>, <em class="sig-param">64</em>, <em class="sig-param">3)</em>, <em class="sig-param">center=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/crop/#Crop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.crop.Crop" title="Permalink to this definition">¶</a></dt>
+<dd><p>A callback class that will return the input array cropped to the output size. N-dimensional.</p>
+<dl class="method">
+<dt id="displayarray.effects.crop.Crop.center">
+<em class="property">property </em><code class="sig-name descname">center</code><a class="headerlink" href="#displayarray.effects.crop.Crop.center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the center.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.crop.Crop.enable_mouse_control">
+<code class="sig-name descname">enable_mouse_control</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/crop/#Crop.enable_mouse_control"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.crop.Crop.enable_mouse_control" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the mouse to move where the crop is from on the original image.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="displayarray.effects.crop.Crop.output_size">
+<em class="property">property </em><code class="sig-name descname">output_size</code><a class="headerlink" href="#displayarray.effects.crop.Crop.output_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the output size.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-displayarray.effects.lens">
+<span id="lens"></span><h2>Lens<a class="headerlink" href="#module-displayarray.effects.lens" title="Permalink to this headline">¶</a></h2>
 <p>Create lens effects. Currently only 2D+color arrays are supported.</p>
 <dl class="class">
 <dt id="displayarray.effects.lens.Barrel">
@@ -150,6 +179,30 @@ scroll wheel: adjust barrel power</p>
 </dd></dl>
 
 </div>
+<div class="section" id="select-channels">
+<h2>Select Channels<a class="headerlink" href="#select-channels" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="displayarray.effects.select_channels.SelectChannels">
+<em class="property">class </em><code class="sig-name descname">SelectChannels</code><span class="sig-paren">(</span><em class="sig-param">selected_channels: Iterable[int] = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/select_channels/#SelectChannels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.select_channels.SelectChannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select channels to display from an array with too many colors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>selected_channels</strong> – the list of channels to display.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="displayarray.effects.select_channels.SelectChannels.enable_mouse_control">
+<code class="sig-name descname">enable_mouse_control</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/effects/select_channels/#SelectChannels.enable_mouse_control"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.effects.select_channels.SelectChannels.enable_mouse_control" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable mouse control.</p>
+<p>Alt+Scroll to increase/decrease channel 2.
+Shift+Scroll to increase/decrease channel 1.
+Ctrl+scroll to increase/decrease channel 0.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
 
 
           </div>
@@ -170,13 +223,15 @@ scroll wheel: adjust barrel power</p>
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Python API</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../displayarray/">displayarray</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../crop/">displayarray.effects.crop</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">displayarray.effects.lens</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../select_channels/">displayarray.effects.select_channels</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../frame/">displayarray.frame</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../window/">displayarray.window</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../input/">displayarray.input</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../display/">display</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../frame/">frame</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">effects</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#crop">Crop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-displayarray.effects.lens">Lens</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#select-channels">Select Channels</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../input/">input</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Bash API</span></p>
 <ul>
@@ -187,8 +242,8 @@ scroll wheel: adjust barrel power</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="../">Documentation overview</a><ul>
-      <li>Previous: <a href="../crop/" title="previous chapter">displayarray.effects.crop</a></li>
-      <li>Next: <a href="../select_channels/" title="next chapter">displayarray.effects.select_channels</a></li>
+      <li>Previous: <a href="../frame/" title="previous chapter">displayarray.frame</a></li>
+      <li>Next: <a href="../input/" title="next chapter">displayarray.input</a></li>
   </ul></li>
 </ul>
 </div>
@@ -222,7 +277,7 @@ scroll wheel: adjust barrel power</p>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="../_sources/lens.rst.txt"
+      <a href="../_sources/effects.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 
