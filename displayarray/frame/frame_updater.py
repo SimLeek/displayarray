@@ -26,7 +26,7 @@ class FrameUpdater(threading.Thread):
         callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
         request_size: Tuple[int, int] = (-1, -1),
         high_speed: bool = True,
-        fps_limit: float = 240,
+        fps_limit: float = float("inf"),
     ):
         """Create the frame updater thread."""
         super(FrameUpdater, self).__init__(target=self.loop, args=())
@@ -115,7 +115,7 @@ class FrameUpdater(threading.Thread):
             raise self.exception_raised
 
 
-async def read_updates(
+'''async def read_updates(
     *vids,
     callbacks: Optional[
         Union[
@@ -174,7 +174,7 @@ async def read_updates(
     for v in vid_names:
         subscriber_dictionary.stop_cam(v)
     for v in vid_threads:
-        v.join()
+        v.join()'''
 
 
 async def read_updates_zero_mq(

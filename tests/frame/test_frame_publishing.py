@@ -145,6 +145,6 @@ def test_pub_cam_thread():
         pub_cam_thread(5)
 
         mock_thread.assert_called_once_with(
-            target=fpub.pub_cam_loop, args=(5, (-1, -1), True, 240)
+            target=fpub.pub_cam_loop, args=(5, (-1, -1), True, float("inf"))
         )
         thread_instance.start.assert_called_once()

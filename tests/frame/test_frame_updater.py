@@ -14,7 +14,7 @@ def test_init_defaults():
     assert ud.callbacks == []
     assert ud.request_size == (-1, -1)
     assert ud.high_speed == True
-    assert ud.fps_limit == 240
+    assert ud.fps_limit == float("inf")
 
 
 def test_init():
@@ -57,7 +57,7 @@ def test_loop():
 
         ud.loop()
 
-        mock_pubcam_thread.assert_called_once_with(0, (-1, -1), True, 240)
+        mock_pubcam_thread.assert_called_once_with(0, (-1, -1), True, float("inf"))
         mock_frame_sub.assert_called_once_with("0")
         handler_cmd_sub.assert_called_once_with("0")
         sub_cam.get.assert_has_calls([mock.call(blocking=True, timeout=1.0)] * 3)

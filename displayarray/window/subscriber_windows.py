@@ -30,6 +30,7 @@ class SubscriberWindows(object):
         window_names: Iterable[str] = ("displayarray",),
         video_sources: Iterable[Union[str, int]] = (0,),
         callbacks: Optional[List[Callable[[np.ndarray], Any]]] = None,
+        silent: bool = False,
     ):
         """Create the array displaying window."""
         self.source_names: List[Union[str, int]] = []
@@ -39,20 +40,27 @@ class SubscriberWindows(object):
         self.window_names: List[str] = []
         self.input_cams: List[str] = []
         self.exited = False
+        self.silent = silent
 
         if callbacks is None:
             callbacks = []
         for name in video_sources:
             self.add_source(name)
         self.callbacks = callbacks
-        for name in window_names:
-            self.add_window(name)
+        if not self.silent:
+            for name in window_names:
+                self.add_window(name)
 
         self.update()
 
     def __bool__(self):
         self.update()
         return not self.exited
+
+    def __iter__(self):
+        while not self.exited:
+            self.update()
+            yield self.frames
 
     def block(self):
         """Update the window continuously while blocking the outer program."""
@@ -109,7 +117,7 @@ class SubscriberWindows(object):
         mousey = MouseEvent(event, x, y, flags, param)
         window_commands.mouse_pub.publish(mousey)
 
-    def _display_frames(self, frames, win_num=0, ids=None):
+    def display_frames(self, frames, win_num=0, ids=None):
         if isinstance(frames, Exception):
             raise frames
         for f in range(len(frames)):
@@ -122,7 +130,7 @@ class SubscriberWindows(object):
                     and (len(frames[f].shape) != 3 or frames[f].shape[-1] != 3)
                 )
             ):
-                win_num = self._display_frames(frames[f], win_num, ids)
+                win_num = self.display_frames(frames[f], win_num, ids)
             else:
                 if len(self.window_names) <= win_num:
                     self.add_window(str(win_num))
@@ -157,7 +165,7 @@ class SubscriberWindows(object):
                     self.frames[fr] = self.callbacks[-1](self.frames[fr])
                 break
 
-    def update_window_frames(self):
+    def update_frames(self):
         """Update the windows with the newest data for all frames."""
         self.frames = []
         for i in range(len(self.input_vid_global_names)):
@@ -172,9 +180,11 @@ class SubscriberWindows(object):
                         frame = c(self.frames[-1])
                         if frame is not None:
                             self.frames[-1] = frame
-                self.__check_too_many_channels()
+                if not self.silent:
+                    self.__check_too_many_channels()
                 self.FRAME_DICT[self.input_vid_global_names[i]] = NoData()
-        self._display_frames(self.frames)
+        if not self.silent:
+            self.display_frames(self.frames)
 
     def update(self, arr: np.ndarray = None, id: str = None):
         """Update window frames once. Optionally add a new input and input id."""
@@ -182,9 +192,10 @@ class SubscriberWindows(object):
             global_cv_display_callback(arr, id)
             if id not in self.input_cams:
                 self.add_source(id)
-                self.add_window(id)
+                if not self.silent:
+                    self.add_window(id)
         sub_cmd = window_commands.win_cmd_sub()
-        self.update_window_frames()
+        self.update_frames()
         msg_cmd = sub_cmd.get()
         key = self.handle_keys(cv2.waitKey(1))
         return msg_cmd, key
@@ -231,7 +242,7 @@ class SubscriberWindows(object):
 def _get_video_callback_dict_threads(
     *vids,
     callbacks: Optional[Dict[Any, Union[FrameCallable, List[FrameCallable]]]] = None,
-    fps=240,
+    fps=float("inf"),
     size=(-1, -1),
 ):
     assert callbacks is not None
@@ -264,7 +275,7 @@ def _get_video_threads(
             FrameCallable,
         ]
     ] = None,
-    fps=240,
+    fps=float("inf"),
     size=(-1, -1),
 ):
     vid_threads: List[Thread] = []
@@ -300,8 +311,9 @@ def display(
     ] = None,
     window_names=None,
     blocking=False,
-    fps_limit=240,
+    fps_limit=float("inf"),
     size=(-1, -1),
+    silent=False,
 ):
     """
     Display all the arrays, cameras, and videos passed in.
@@ -318,11 +330,15 @@ def display(
     if window_names is None:
         window_names = ["window {}".format(i) for i in range(len(vids))]
     if blocking:
-        SubscriberWindows(window_names=window_names, video_sources=vids).loop()
+        SubscriberWindows(
+            window_names=window_names, video_sources=vids, silent=silent
+        ).loop()
         for vt in vid_threads:
             vt.join()
     else:
-        s = SubscriberWindows(window_names=window_names, video_sources=vids)
+        s = SubscriberWindows(
+            window_names=window_names, video_sources=vids, silent=silent
+        )
         s.close_threads = vid_threads
         return s
 
@@ -330,3 +346,7 @@ def display(
 def breakpoint_display(*args, **kwargs):
     """Display all the arrays, cameras, and videos passed in. Stops code execution until the window is closed."""
     return display(*args, **kwargs, blocking=True)
+
+
+def read_updates(*args, **kwargs):
+    return display(*args, **kwargs, silent=True)
