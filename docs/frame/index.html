@@ -34,22 +34,6 @@
             
   <div class="section" id="displayarray-frame">
 <h1>displayarray.frame<a class="headerlink" href="#displayarray-frame" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="read-updates">
-<h2>Read Updates<a class="headerlink" href="#read-updates" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="displayarray.read_updates">
-<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.read_updates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read back all updates from the requested videos.</p>
-<p>Example usage:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">examples.videos</span> <span class="kn">import</span> <span class="n">test_video</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">read_updates</span><span class="p">(</span><span class="n">test_video</span><span class="p">,</span> <span class="n">end_callback</span><span class="o">=</span><span class="k">lambda</span> <span class="p">:</span><span class="n">f</span><span class="o">==</span><span class="mi">2</span><span class="p">)):</span>
-<span class="gp">... </span>  <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Frame:{f}. Array:{r}&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-</dd></dl>
-
-</div>
 <div class="section" id="module-displayarray.frame">
 <span id="frame-passing"></span><h2>Frame Passing<a class="headerlink" href="#module-displayarray.frame" title="Permalink to this headline">¶</a></h2>
 <p>Handles publishing arrays, videos, and cameras.</p>
@@ -60,7 +44,7 @@ pub_cam_thread continually publishes updates to arrays, videos, and cameras
 np_cam simulates numpy arrays as OpenCV cameras</p>
 <dl class="class">
 <dt id="displayarray.frame.FrameUpdater">
-<em class="property">class </em><code class="sig-name descname">FrameUpdater</code><span class="sig-paren">(</span><em class="sig-param">video_source: Union[int, str, numpy.ndarray] = 0, callbacks: Union[List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, request_size: Tuple[int, int] = (-1, -1), high_speed: bool = True, fps_limit: float = 240</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#FrameUpdater"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.FrameUpdater" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">FrameUpdater</code><span class="sig-paren">(</span><em class="sig-param">video_source: Union[int, str, numpy.ndarray] = 0, callbacks: Union[List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, request_size: Tuple[int, int] = (-1, -1), high_speed: bool = True, fps_limit: float = inf</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#FrameUpdater"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.FrameUpdater" title="Permalink to this definition">¶</a></dt>
 <dd><p>Thread for updating frames from a video source.</p>
 <dl class="method">
 <dt id="displayarray.frame.FrameUpdater.display">
@@ -80,19 +64,6 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 <dd><p>Continually get frames from the video publisher, run callbacks on them, and listen to commands.</p>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="function">
-<dt id="displayarray.frame.read_updates">
-<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, fps_limit=inf, size=(-1, -1), end_callback: Callable[[], bool] = &lt;function &lt;lambda&gt;&gt;, blocking=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/frame/frame_updater/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.read_updates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Read back all updates from the requested videos.</p>
-<p>Example usage:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">examples.videos</span> <span class="kn">import</span> <span class="n">test_video</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">f</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">read_updates</span><span class="p">(</span><span class="n">test_video</span><span class="p">,</span> <span class="n">end_callback</span><span class="o">=</span><span class="k">lambda</span> <span class="p">:</span><span class="n">f</span><span class="o">==</span><span class="mi">2</span><span class="p">)):</span>
-<span class="gp">... </span>  <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Frame:{f}. Array:{r}&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
 </dd></dl>
 
 <dl class="function">
@@ -139,7 +110,7 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 
 <dl class="function">
 <dt id="displayarray.frame.pub_cam_thread">
-<code class="sig-name descname">pub_cam_thread</code><span class="sig-paren">(</span><em class="sig-param">cam_id: Union[int, str], request_ize: Tuple[int, int] = (-1, -1), high_speed: bool = True, fps_limit: float = 240</em><span class="sig-paren">)</span> &#x2192; threading.Thread<a class="reference internal" href="../_modules/displayarray/frame/frame_publishing/#pub_cam_thread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.pub_cam_thread" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">pub_cam_thread</code><span class="sig-paren">(</span><em class="sig-param">cam_id: Union[int, str], request_ize: Tuple[int, int] = (-1, -1), high_speed: bool = True, fps_limit: float = inf</em><span class="sig-paren">)</span> &#x2192; threading.Thread<a class="reference internal" href="../_modules/displayarray/frame/frame_publishing/#pub_cam_thread"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.frame.pub_cam_thread" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run pub_cam_loop in a new thread. Starts on creation.</p>
 </dd></dl>
 
@@ -167,7 +138,6 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../display/">display</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">frame</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#read-updates">Read Updates</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-displayarray.frame">Frame Passing</a></li>
 </ul>
 </li>
@@ -214,7 +184,7 @@ np_cam simulates numpy arrays as OpenCV cameras</p>
       &copy;2019, Simulator Leek.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |

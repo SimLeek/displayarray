@@ -13,7 +13,6 @@ Frame Passing
 .. autoclass:: FrameUpdater
     :members:
 
-.. autofunction:: read_updates
 .. autofunction:: get_cam_ids
 
 .. autoclass:: NpCam
