@@ -118,6 +118,7 @@ class SubscriberWindows(object):
         window_commands.mouse_pub.publish(mousey)
 
     def display_frames(self, frames, win_num=0, ids=None):
+        """Display a list of frames on multiple windows."""
         if isinstance(frames, Exception):
             raise frames
         for f in range(len(frames)):
