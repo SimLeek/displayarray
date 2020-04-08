@@ -132,14 +132,14 @@ class FrameUpdater(threading.Thread):
     """
     Read back all updates from the requested videos.
 
-    Example usage:
+    Examp#le usage:
 
-    .. code-block:: python
+    .. co#de-block:: python
 
-      >>> from examples.videos import test_video
-      >>> f = 0
-      >>> for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
-      ...   print(f"Frame:{f}. Array:{r}")
+      >>#> from examples.videos import test_video
+      >>#> f = 0
+      >>#> for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):
+      ..#.   print(f"Frame:{f}. Array:{r}")
 
     """
     from displayarray.window import SubscriberWindows

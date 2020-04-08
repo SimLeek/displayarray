@@ -349,4 +349,5 @@ def breakpoint_display(*args, **kwargs):
 
 
 def read_updates(*args, **kwargs):
+    """Read back all frame updates and yield a list of frames. List is empty if no frames were read."""
     return display(*args, **kwargs, silent=True)
