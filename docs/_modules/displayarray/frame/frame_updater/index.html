@@ -50,7 +50,7 @@
 <span class="n">FrameCallable</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]]</span>
 
 
-<div class="viewcode-block" id="FrameUpdater"><a class="viewcode-back" href="../../../../frame/#displayarray.FrameUpdater">[docs]</a><span class="k">class</span> <span class="nc">FrameUpdater</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
+<div class="viewcode-block" id="FrameUpdater"><a class="viewcode-back" href="../../../../frame/#displayarray.frame.FrameUpdater">[docs]</a><span class="k">class</span> <span class="nc">FrameUpdater</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Thread for updating frames from a video source.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
@@ -59,7 +59,7 @@
         <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">],</span> <span class="n">FrameCallable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">request_size</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
         <span class="n">high_speed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">fps_limit</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">240</span><span class="p">,</span>
+        <span class="n">fps_limit</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create the frame updater thread.&quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">FrameUpdater</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">loop</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
@@ -110,7 +110,7 @@
                 <span class="k">raise</span> <span class="n">e</span>
             <span class="n">global_cv_display_callback</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cam_id</span><span class="p">)</span>
 
-<div class="viewcode-block" id="FrameUpdater.loop"><a class="viewcode-back" href="../../../../frame/#displayarray.FrameUpdater.loop">[docs]</a>    <span class="k">def</span> <span class="nf">loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="FrameUpdater.loop"><a class="viewcode-back" href="../../../../frame/#displayarray.frame.FrameUpdater.loop">[docs]</a>    <span class="k">def</span> <span class="nf">loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Continually get frames from the video publisher, run callbacks on them, and listen to commands.&quot;&quot;&quot;</span>
         <span class="n">t</span> <span class="o">=</span> <span class="n">pub_cam_thread</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">video_source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_speed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fps_limit</span>
@@ -129,7 +129,7 @@
         <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">stop_cam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cam_id</span><span class="p">)</span>
         <span class="n">t</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="FrameUpdater.display"><a class="viewcode-back" href="../../../../frame/#displayarray.FrameUpdater.display">[docs]</a>    <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callbacks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="FrameUpdater.display"><a class="viewcode-back" href="../../../../frame/#displayarray.frame.FrameUpdater.display">[docs]</a>    <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callbacks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Start default display operation.</span>
 
@@ -148,66 +148,66 @@
             <span class="k">raise</span> <span class="bp">self</span><span class="o">.</span><span class="n">exception_raised</span></div></div>
 
 
-<div class="viewcode-block" id="read_updates"><a class="viewcode-back" href="../../../../frame/#displayarray.read_updates">[docs]</a><span class="k">async</span> <span class="k">def</span> <span class="nf">read_updates</span><span class="p">(</span>
-    <span class="o">*</span><span class="n">vids</span><span class="p">,</span>
-    <span class="n">callbacks</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span>
-        <span class="n">Union</span><span class="p">[</span>
-            <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">]]],</span>
-            <span class="n">List</span><span class="p">[</span><span class="n">FrameCallable</span><span class="p">],</span>
-            <span class="n">FrameCallable</span><span class="p">,</span>
-        <span class="p">]</span>
-    <span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">fps_limit</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
-    <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span>
-    <span class="n">end_callback</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">&#39;&#39;&#39;async def read_updates(</span>
+<span class="sd">    *vids,</span>
+<span class="sd">    callbacks: Optional[</span>
+<span class="sd">        Union[</span>
+<span class="sd">            Dict[Any, Union[FrameCallable, List[FrameCallable]]],</span>
+<span class="sd">            List[FrameCallable],</span>
+<span class="sd">            FrameCallable,</span>
+<span class="sd">        ]</span>
+<span class="sd">    ] = None,</span>
+<span class="sd">    fps_limit=float(&quot;inf&quot;),</span>
+<span class="sd">    size=(-1, -1),</span>
+<span class="sd">    end_callback: Callable[[], bool] = lambda: False,</span>
+<span class="sd">    blocking=True,</span>
+<span class="sd">):</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 <span class="sd">    Read back all updates from the requested videos.</span>
 
-<span class="sd">    Example usage:</span>
+<span class="sd">    Examp#le usage:</span>
 
-<span class="sd">    .. code-block:: python</span>
+<span class="sd">    .. co#de-block:: python</span>
 
-<span class="sd">      &gt;&gt;&gt; from examples.videos import test_video</span>
-<span class="sd">      &gt;&gt;&gt; f = 0</span>
-<span class="sd">      &gt;&gt;&gt; for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):</span>
-<span class="sd">      ...   print(f&quot;Frame:{f}. Array:{r}&quot;)</span>
+<span class="sd">      &gt;&gt;#&gt; from examples.videos import test_video</span>
+<span class="sd">      &gt;&gt;#&gt; f = 0</span>
+<span class="sd">      &gt;&gt;#&gt; for f, r in enumerate(read_updates(test_video, end_callback=lambda :f==2)):</span>
+<span class="sd">      ..#.   print(f&quot;Frame:{f}. Array:{r}&quot;)</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="kn">from</span> <span class="nn">displayarray.window</span> <span class="k">import</span> <span class="n">SubscriberWindows</span>
-    <span class="kn">from</span> <span class="nn">displayarray.window.subscriber_windows</span> <span class="k">import</span> <span class="n">_get_video_threads</span>
+<span class="sd">    from displayarray.window import SubscriberWindows</span>
+<span class="sd">    from displayarray.window.subscriber_windows import _get_video_threads</span>
 
-    <span class="n">vid_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">uid_for_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">vids</span><span class="p">]</span>
-    <span class="n">vid_threads</span> <span class="o">=</span> <span class="n">_get_video_threads</span><span class="p">(</span>
-        <span class="o">*</span><span class="n">vids</span><span class="p">,</span> <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="n">fps_limit</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span>
-    <span class="p">)</span>
-    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vid_threads</span><span class="p">:</span>
-        <span class="n">v</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+<span class="sd">    vid_names = [uid_for_source(name) for name in vids]</span>
+<span class="sd">    vid_threads = _get_video_threads(</span>
+<span class="sd">        *vids, callbacks=callbacks, fps=fps_limit, size=size</span>
+<span class="sd">    )</span>
+<span class="sd">    for v in vid_threads:</span>
+<span class="sd">        v.start()</span>
 
-    <span class="k">while</span> <span class="ow">not</span> <span class="n">end_callback</span><span class="p">():</span>
-        <span class="n">vid_update_dict</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">dict_was_updated</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">vid_names</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="n">SubscriberWindows</span><span class="o">.</span><span class="n">FRAME_DICT</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
-                <span class="n">SubscriberWindows</span><span class="o">.</span><span class="n">FRAME_DICT</span><span class="p">[</span><span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">NoData</span>
-            <span class="p">):</span>
-                <span class="n">vid_update_dict</span><span class="p">[</span><span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">SubscriberWindows</span><span class="o">.</span><span class="n">FRAME_DICT</span><span class="p">[</span>
-                    <span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                <span class="p">]</span>
-                <span class="k">if</span> <span class="p">(</span>
-                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">vid_update_dict</span><span class="p">[</span><span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
-                    <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">vid_update_dict</span><span class="p">[</span><span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">3</span>
-                <span class="p">):</span>
-                    <span class="n">vid_update_dict</span><span class="p">[</span><span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="n">vid_update_dict</span><span class="p">[</span><span class="n">vid_names</span><span class="p">[</span><span class="n">i</span><span class="p">]]]</span>
-                <span class="n">dict_was_updated</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="k">if</span> <span class="n">dict_was_updated</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">blocking</span><span class="p">:</span>
-            <span class="k">yield</span> <span class="n">vid_update_dict</span>
-        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vid_names</span><span class="p">:</span>
-        <span class="n">subscriber_dictionary</span><span class="o">.</span><span class="n">stop_cam</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vid_threads</span><span class="p">:</span>
-        <span class="n">v</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+<span class="sd">    while not end_callback():</span>
+<span class="sd">        vid_update_dict = {}</span>
+<span class="sd">        dict_was_updated = False</span>
+<span class="sd">        for i in range(len(vid_names)):</span>
+<span class="sd">            if vid_names[i] in SubscriberWindows.FRAME_DICT and not isinstance(</span>
+<span class="sd">                SubscriberWindows.FRAME_DICT[vid_names[i]], NoData</span>
+<span class="sd">            ):</span>
+<span class="sd">                vid_update_dict[vid_names[i]] = SubscriberWindows.FRAME_DICT[</span>
+<span class="sd">                    vid_names[i]</span>
+<span class="sd">                ]</span>
+<span class="sd">                if (</span>
+<span class="sd">                    isinstance(vid_update_dict[vid_names[i]], np.ndarray)</span>
+<span class="sd">                    and len(vid_update_dict[vid_names[i]].shape) &lt;= 3</span>
+<span class="sd">                ):</span>
+<span class="sd">                    vid_update_dict[vid_names[i]] = [vid_update_dict[vid_names[i]]]</span>
+<span class="sd">                dict_was_updated = True</span>
+<span class="sd">        if dict_was_updated or not blocking:</span>
+<span class="sd">            yield vid_update_dict</span>
+<span class="sd">        await asyncio.sleep(0)</span>
+<span class="sd">    for v in vid_names:</span>
+<span class="sd">        subscriber_dictionary.stop_cam(v)</span>
+<span class="sd">    for v in vid_threads:</span>
+<span class="sd">        v.join()&#39;&#39;&#39;</span>
 
 
 <span class="k">async</span> <span class="k">def</span> <span class="nf">read_updates_zero_mq</span><span class="p">(</span>
@@ -404,7 +404,7 @@
       &copy;2019, Simulator Leek.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
     </div>

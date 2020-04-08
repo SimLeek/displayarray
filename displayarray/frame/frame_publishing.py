@@ -20,7 +20,7 @@ def pub_cam_loop(
     cam_id: Union[int, str, np.ndarray],
     request_size: Tuple[int, int] = (-1, -1),
     high_speed: bool = True,
-    fps_limit: float = 240,
+    fps_limit: float = float("inf"),
 ) -> bool:
     """
     Publish whichever camera you select to CVCams.<cam_id>.Vid.
@@ -47,7 +47,6 @@ def pub_cam_loop(
 
     subscriber_dictionary.register_cam(name)
 
-    # cam.set(cv2.CAP_PROP_CONVERT_RGB, 0)
     frame_counter = 0
 
     sub = subscriber_dictionary.cam_cmd_sub(name)
@@ -89,7 +88,7 @@ def pub_cam_thread(
     cam_id: Union[int, str],
     request_ize: Tuple[int, int] = (-1, -1),
     high_speed: bool = True,
-    fps_limit: float = 240,
+    fps_limit: float = float("inf"),
 ) -> threading.Thread:
     """Run pub_cam_loop in a new thread. Starts on creation."""
     t = threading.Thread(
@@ -186,8 +185,8 @@ async def publish_updates_ros(
             }[dtype]
         else:
             msg_type = (
-                dtype
-            )  # allow users to use their own custom messages in numpy arrays
+                dtype  # allow users to use their own custom messages in numpy arrays
+            )
         return msg_type
 
     publishers: Dict[str, rospy.Publisher] = {}

@@ -4,6 +4,7 @@ displayarray.display
 
 .. autofunction:: display
 .. autofunction:: breakpoint_display
+.. autofunction:: read_updates
 
 Windows
 -------

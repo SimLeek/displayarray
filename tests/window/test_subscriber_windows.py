@@ -181,7 +181,7 @@ def test_handle_mouse():
         mock_win_cmd.mouse_pub.publish.assert_called_once_with(mock_mousey)
 
 
-def test_update_window_frames():
+def test_update_frames():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
         cv2, "imshow"
@@ -191,13 +191,13 @@ def test_update_window_frames():
         frame = np.ones((100, 100))
         sw.FRAME_DICT["0"] = frame
 
-        sw.update_window_frames()
+        sw.update_frames()
 
         assert sw.frames == [frame]
         mock_imshow.assert_called_once_with("displayarray (press ESC to quit)", frame)
 
 
-def test_update_window_frames_callback():
+def test_update_frames_callback():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
         cv2, "imshow"
@@ -217,7 +217,7 @@ def test_update_window_frames_callback():
         sw.FRAME_DICT["0"] = frame
         sw.FRAME_DICT["1"] = frame
 
-        sw.update_window_frames()
+        sw.update_frames()
 
         assert sw.frames == [frame3, frame3]
         assert np.all(cb.mock_calls[0].args[0] == frame)
@@ -230,7 +230,7 @@ def test_update_window_frames_callback():
         )
 
 
-def test_update_window_frames_too_many_channels():
+def test_update_frames_too_many_channels():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
         cv2, "imshow"
@@ -242,7 +242,7 @@ def test_update_window_frames_too_many_channels():
         frame = np.ones((100, 100, 100))
         sw.FRAME_DICT["0"] = frame
 
-        sw.update_window_frames()
+        sw.update_frames()
 
         mock_print.assert_has_calls(
             [
@@ -263,7 +263,7 @@ def test_update_window_frames_too_many_channels():
         assert sw.frames[0].shape[-1] == 3
 
 
-def test_update_window_frames_nested():
+def test_update_frames_nested():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
         cv2, "imshow"
@@ -273,7 +273,7 @@ def test_update_window_frames_nested():
         frame = np.ones((20, 100, 100, 100))
         sw.FRAME_DICT["0"] = frame
 
-        sw.update_window_frames()
+        sw.update_frames()
 
         assert np.all(sw.frames[0] == np.ones((20, 100, 100, 3)))
         assert len(sw.frames) == 1
@@ -319,7 +319,7 @@ def test_update_window_frames_nested():
         assert np.all(mock_imshow.mock_calls[19].args[1] == np.ones((100, 100, 3)))
 
 
-def test_update_window_frames_exception():
+def test_update_frames_exception():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
         cv2, "imshow"
@@ -330,14 +330,14 @@ def test_update_window_frames_exception():
         sw.FRAME_DICT["0"] = frame
 
         with pytest.raises(RuntimeError) as e:
-            sw.update_window_frames()
+            sw.update_frames()
         assert e.value == frame
 
 
 def test_update():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
-        sub_win.SubscriberWindows, "update_window_frames"
+        sub_win.SubscriberWindows, "update_frames"
     ) as mock_update_win_frames, mock.patch(
         "displayarray.window.subscriber_windows.window_commands"
     ) as mock_win_cmd, mock.patch.object(
@@ -364,7 +364,7 @@ def test_update():
 def test_update_with_array():
     sub_win.SubscriberWindows.FRAME_DICT = {}
     with mock.patch.object(cv2, "namedWindow"), mock.patch.object(
-        sub_win.SubscriberWindows, "update_window_frames"
+        sub_win.SubscriberWindows, "update_frames"
     ) as mock_update_win_frames, mock.patch(
         "displayarray.window.subscriber_windows.window_commands"
     ) as mock_win_cmd, mock.patch.object(
@@ -495,13 +495,13 @@ def test_display():
 
         fup.assert_has_calls(
             [
-                mock.call(0, fps_limit=240, request_size=(50, 50)),
-                mock.call(1, fps_limit=240, request_size=(50, 50)),
+                mock.call(0, fps_limit=float("inf"), request_size=(50, 50)),
+                mock.call(1, fps_limit=float("inf"), request_size=(50, 50)),
             ]
         )
         assert fup_inst.start.call_count == 2
         sws.assert_called_once_with(
-            window_names=["window 0", "window 1"], video_sources=(0, 1)
+            window_names=["window 0", "window 1"], video_sources=(0, 1), silent=False
         )
         assert sws_inst.close_threads == [fup_inst, fup_inst]
         assert d == sws_inst
@@ -521,7 +521,7 @@ def test_display_blocking():
 
         assert fup_inst.start.call_count == 2
         sws.assert_called_once_with(
-            window_names=["window 0", "window 1"], video_sources=(0, 1)
+            window_names=["window 0", "window 1"], video_sources=(0, 1), silent=False
         )
         sws_inst.loop.assert_called_once()
         assert fup_inst.join.call_count == 2
@@ -540,8 +540,12 @@ def test_display_callbacks():
 
         fup.assert_has_calls(
             [
-                mock.call(0, callbacks=[cb], fps_limit=240, request_size=(-1, -1)),
-                mock.call(1, callbacks=[cb], fps_limit=240, request_size=(-1, -1)),
+                mock.call(
+                    0, callbacks=[cb], fps_limit=float("inf"), request_size=(-1, -1)
+                ),
+                mock.call(
+                    1, callbacks=[cb], fps_limit=float("inf"), request_size=(-1, -1)
+                ),
             ]
         )
 
@@ -574,10 +578,17 @@ def test_display_callbacks_dict():
 
         fup.assert_has_calls(
             [
-                mock.call(0, callbacks=[cb1], fps_limit=240, request_size=(-1, -1)),
                 mock.call(
-                    1, callbacks=[cb1, cb2], fps_limit=240, request_size=(-1, -1)
+                    0, callbacks=[cb1], fps_limit=float("inf"), request_size=(-1, -1)
                 ),
-                mock.call(2, callbacks=[cb3], fps_limit=240, request_size=(-1, -1)),
+                mock.call(
+                    1,
+                    callbacks=[cb1, cb2],
+                    fps_limit=float("inf"),
+                    request_size=(-1, -1),
+                ),
+                mock.call(
+                    2, callbacks=[cb3], fps_limit=float("inf"), request_size=(-1, -1)
+                ),
             ]
         )

@@ -1,12 +1,6 @@
 displayarray.frame
 ===================================
 
-Read Updates
-------------
-.. currentmodule:: displayarray
-
-.. autofunction:: read_updates
-
 Frame Passing
 -------------
 .. currentmodule:: displayarray.frame
@@ -19,7 +13,6 @@ Frame Passing
 .. autoclass:: FrameUpdater
     :members:
 
-.. autofunction:: read_updates
 .. autofunction:: get_cam_ids
 
 .. autoclass:: NpCam

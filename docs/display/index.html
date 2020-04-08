@@ -38,7 +38,7 @@
 <p>display is a function that displays these in their own windows.</p>
 <dl class="function">
 <dt id="displayarray.display">
-<code class="sig-name descname">display</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, window_names=None, blocking=False, fps_limit=240, size=(-1, -1)</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.display" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">display</code><span class="sig-paren">(</span><em class="sig-param">*vids, callbacks: Union[Dict[Any, Union[Callable[[numpy.ndarray], Optional[numpy.ndarray]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]]]], List[Callable[[numpy.ndarray], Optional[numpy.ndarray]]], Callable[[numpy.ndarray], Optional[numpy.ndarray]], None] = None, window_names=None, blocking=False, fps_limit=inf, size=(-1, -1), silent=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#display"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.display" title="Permalink to this definition">¶</a></dt>
 <dd><p>Display all the arrays, cameras, and videos passed in.</p>
 <dl class="simple">
 <dt>callbacks can be a dictionary linking functions to videos, or a list of function or functions operating on the video</dt><dd><p>data before displaying.</p>
@@ -53,11 +53,17 @@
 <dd><p>Display all the arrays, cameras, and videos passed in. Stops code execution until the window is closed.</p>
 </dd></dl>
 
+<dl class="function">
+<dt id="displayarray.read_updates">
+<code class="sig-name descname">read_updates</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#read_updates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.read_updates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read back all frame updates and yield a list of frames. List is empty if no frames were read.</p>
+</dd></dl>
+
 <div class="section" id="windows">
 <h2>Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="displayarray.window.SubscriberWindows">
-<em class="property">class </em><code class="sig-name descname">SubscriberWindows</code><span class="sig-paren">(</span><em class="sig-param">window_names: Iterable[str] = ('displayarray',), video_sources: Iterable[Union[str, int]] = (0,), callbacks: Optional[List[Callable[[numpy.ndarray], Any]]] = None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-name descname">SubscriberWindows</code><span class="sig-paren">(</span><em class="sig-param">window_names: Iterable[str] = ('displayarray',), video_sources: Iterable[Union[str, int]] = (0,), callbacks: Optional[List[Callable[[numpy.ndarray], Any]]] = None, silent: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows" title="Permalink to this definition">¶</a></dt>
 <dd><p>Windows that subscribe to updates to cameras, videos, and arrays.</p>
 <dl class="method">
 <dt id="displayarray.window.SubscriberWindows.add_callback">
@@ -114,8 +120,8 @@
 </dd></dl>
 
 <dl class="method">
-<dt id="displayarray.window.SubscriberWindows.update_window_frames">
-<code class="sig-name descname">update_window_frames</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.update_window_frames"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.update_window_frames" title="Permalink to this definition">¶</a></dt>
+<dt id="displayarray.window.SubscriberWindows.update_frames">
+<code class="sig-name descname">update_frames</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/displayarray/window/subscriber_windows/#SubscriberWindows.update_frames"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#displayarray.window.SubscriberWindows.update_frames" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update the windows with the newest data for all frames.</p>
 </dd></dl>
 
@@ -197,7 +203,7 @@
       &copy;2019, Simulator Leek.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.1</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
