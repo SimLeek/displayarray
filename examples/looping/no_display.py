@@ -8,7 +8,7 @@ def profile_reading(total_seconds=5):
     t_init = t01 = time.time()
     times = []
     started = False
-    for up in display(1, size=(1, 1)):
+    for up in display(0, size=(1, 1)):
         if up:
             t1 = time.time()
             if started:

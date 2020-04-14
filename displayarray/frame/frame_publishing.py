@@ -31,6 +31,25 @@ from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
 
+def _v4l2_convert_mjpeg(mjpeg: bytes) -> Optional[np.ndarray]:
+    # Thanks: https://stackoverflow.com/a/21844162
+    a = mjpeg.find(b"\xff\xd8")
+    b = mjpeg.find(b"\xff\xd9")
+
+    if a == -1 or b == -1:
+        return None
+    else:
+        jpg = mjpeg[a : b + 2]
+        frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+        return frame
+
+
+def _v4l2_convert_rgb24(rgb24: bytes, width: int, height: int) -> Optional[np.ndarray]:
+    nparr = np.frombuffer(rgb24, np.uint8)
+    np_frame = nparr.reshape((height, width, 3))
+    return np_frame
+
+
 def pub_cam_loop_pyv4l2(
     cam_id: Union[int, str, np.ndarray],
     request_size: Tuple[int, int] = (-1, -1),
@@ -78,18 +97,20 @@ def pub_cam_loop_pyv4l2(
         now = time.time()
         frame_bytes = cam.get_frame()  # type: bytes
 
-        # Thanks: https://stackoverflow.com/a/21844162
-        a = frame_bytes.find(b"\xff\xd8")
-        b = frame_bytes.find(b"\xff\xd9")
+        if cam.pixel_format == "MJPEG":
+            nd_frame = _v4l2_convert_mjpeg(frame_bytes)
+        elif cam.pixel_format == "RGB24":
+            nd_frame = _v4l2_convert_rgb24(frame_bytes, cam.width, cam.height)
+        else:
+            raise NotImplementedError(f"{cam.pixel_format} format not supported.")
 
-        if a == -1 or b == -1:
+        if nd_frame is not None:
+            subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(nd_frame)
+        else:
             cam.close()
             subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
             return False
-        else:
-            jpg = frame_bytes[a : b + 2]
-            frame = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-            subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)
+
         msg = sub.get()
     sub.release()
 
