@@ -35,24 +35,24 @@ def pub_cam_loop_pyv4l2(
     fps_limit: float = float("inf"),
 ):
     """
-   Publish whichever camera you select to CVCams.<cam_id>.Vid, using v4l2 instead of opencv.
+    Publish whichever camera you select to CVCams.<cam_id>.Vid, using v4l2 instead of opencv.
 
-   You can send a quit command 'quit' to CVCams.<cam_id>.Cmd
-   Status information, such as failure to open, will be posted to CVCams.<cam_id>.Status
+    You can send a quit command 'quit' to CVCams.<cam_id>.Cmd
+    Status information, such as failure to open, will be posted to CVCams.<cam_id>.Status
 
-   :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
-   :param fps_limit: Limits the frames per second.
-   :param cam_id: An integer representing which webcam to use, or a string representing a video file.
-   :param request_size: A tuple with width, then height, to request the video size.
-   :return: True if loop ended normally, False if it failed somehow.
-   """
+    :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
+    :param fps_limit: Limits the frames per second.
+    :param cam_id: An integer representing which webcam to use, or a string representing a video file.
+    :param request_size: A tuple with width, then height, to request the video size.
+    :return: True if loop ended normally, False if it failed somehow.
+    """
     name = uid_for_source(cam_id)
 
     if isinstance(cam_id, (int, str)):
         if isinstance(cam_id, int):
-            cam: pyv4lcamera = pyv4lcamera(f"/dev/video{cam_id}", *request_size)
+            cam: pyv4lcamera = pyv4lcamera(f"/dev/video{cam_id}", *request_size)  # type: ignore
         else:
-            cam: pyv4lcamera = pyv4lcamera(cam_id, *request_size)
+            cam = pyv4lcamera(cam_id, *request_size)  # type: ignore
     else:
         raise TypeError(
             "Only strings or ints representing cameras are supported with v4l2."
