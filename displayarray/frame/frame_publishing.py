@@ -7,10 +7,13 @@ import cv2
 import warnings
 import sys
 
+using_pyv4l2cam = False
 try:
     if sys.platform == "linux":
         from PyV4L2Cam.camera import Camera as pyv4lcamera
         from PyV4L2Cam.controls import ControlIDs as pyv4lcontrolids
+
+        using_pyv4l2cam = True
 except ImportError:
     warnings.warn("Could not import PyV4L2Cam on linux. Camera capture will be slow.")
     warnings.warn(
@@ -170,8 +173,13 @@ def pub_cam_thread(
 ) -> threading.Thread:
     """Run pub_cam_loop in a new thread. Starts on creation."""
 
-    if sys.platform == "linux" and (
-        isinstance(cam_id, int) or (isinstance(cam_id, str) and "/dev/video" in cam_id)
+    if (
+        sys.platform == "linux"
+        and using_pyv4l2cam
+        and (
+            isinstance(cam_id, int)
+            or (isinstance(cam_id, str) and "/dev/video" in cam_id)
+        )
     ):
         pub_cam_loop = pub_cam_loop_pyv4l2
     else:
