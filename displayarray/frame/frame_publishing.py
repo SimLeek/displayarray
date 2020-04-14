@@ -50,9 +50,9 @@ def pub_cam_loop_pyv4l2(
 
     if isinstance(cam_id, (int, str)):
         if isinstance(cam_id, int):
-            cam: pyv4lcamera = pyv4lcamera(
+            cam: pyv4lcamera = pyv4lcamera(  # type: ignore
                 f"/dev/video{cam_id}", *request_size
-            )  # type: ignore
+            )
         else:
             cam = pyv4lcamera(cam_id, *request_size)  # type: ignore
     else:
