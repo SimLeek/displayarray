@@ -3,8 +3,20 @@
 import threading
 import time
 import asyncio
-
 import cv2
+import warnings
+import sys
+
+try:
+    if sys.platform == "linux":
+        from PyV4L2Cam.camera import Camera as pyv4lcamera
+        from PyV4L2Cam.controls import ControlIDs as pyv4lcontrolids
+except ImportError:
+    warnings.warn("Could not import PyV4L2Cam on linux. Camera capture will be slow.")
+    warnings.warn(
+        "To install, run: pip install git+https://github.com/simleek/PyV4L2Cam.git"
+    )
+
 import numpy as np
 
 from displayarray.frame import subscriber_dictionary
@@ -16,7 +28,73 @@ from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
 
-def pub_cam_loop(
+def pub_cam_loop_pyv4l2(
+    cam_id: Union[int, str, np.ndarray],
+    request_size: Tuple[int, int] = (-1, -1),
+    high_speed: bool = True,
+    fps_limit: float = float("inf"),
+):
+    """
+    Publish whichever camera you select to CVCams.<cam_id>.Vid, using v4l2 instead of opencv.
+
+    You can send a quit command 'quit' to CVCams.<cam_id>.Cmd
+    Status information, such as failure to open, will be posted to CVCams.<cam_id>.Status
+
+    :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
+    :param fps_limit: Limits the frames per second.
+    :param cam_id: An integer representing which webcam to use, or a string representing a video file.
+    :param request_size: A tuple with width, then height, to request the video size.
+    :return: True if loop ended normally, False if it failed somehow.
+    """
+    name = uid_for_source(cam_id)
+
+    if isinstance(cam_id, (int, str)):
+        if isinstance(cam_id, int):
+            cam: pyv4lcamera = pyv4lcamera(  # type: ignore
+                f"/dev/video{cam_id}", *request_size
+            )
+        else:
+            cam = pyv4lcamera(cam_id, *request_size)  # type: ignore
+    else:
+        raise TypeError(
+            "Only strings or ints representing cameras are supported with v4l2."
+        )
+
+    subscriber_dictionary.register_cam(name)
+
+    sub = subscriber_dictionary.cam_cmd_sub(name)
+    sub.return_on_no_data = ""
+    msg = ""
+
+    if high_speed and cam.pixel_format != "MJPEG":
+        warnings.warn("Camera does not support high speed.")
+
+    now = time.time()
+    while msg != "quit":
+        time.sleep(1.0 / (fps_limit - (time.time() - now)))
+        now = time.time()
+        frame_bytes = cam.get_frame()  # type: bytes
+
+        # Thanks: https://stackoverflow.com/a/21844162
+        a = frame_bytes.find(b"\xff\xd8")
+        b = frame_bytes.find(b"\xff\xd9")
+
+        if a == -1 or b == -1:
+            cam.close()
+            subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
+            return False
+        else:
+            jpg = frame_bytes[a : b + 2]
+            frame = cv2.imdecode(np.fromstring(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+            subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)
+        msg = sub.get()
+    sub.release()
+
+    cam.close()
+    return True
+
+
+def pub_cam_loop_opencv(
     cam_id: Union[int, str, np.ndarray],
     request_size: Tuple[int, int] = (-1, -1),
     high_speed: bool = True,
@@ -91,6 +169,14 @@ def pub_cam_thread(
     fps_limit: float = float("inf"),
 ) -> threading.Thread:
     """Run pub_cam_loop in a new thread. Starts on creation."""
+
+    if sys.platform == "linux" and (
+        isinstance(cam_id, int) or (isinstance(cam_id, str) and "/dev/video" in cam_id)
+    ):
+        pub_cam_loop = pub_cam_loop_pyv4l2
+    else:
+        pub_cam_loop = pub_cam_loop_opencv
+
     t = threading.Thread(
         target=pub_cam_loop, args=(cam_id, request_ize, high_speed, fps_limit)
     )
@@ -111,7 +197,7 @@ async def publish_updates_zero_mq(
     prepend_topic="",
     flags=0,
     copy=True,
-    track=False
+    track=False,
 ):
     """Publish frames to ZeroMQ when they're updated."""
     import zmq
@@ -159,7 +245,7 @@ async def publish_updates_ros(
     node_name="displayarray",
     publisher_name="npy",
     rate_hz=None,
-    dtype=None
+    dtype=None,
 ):
     """Publish frames to ROS when they're updated."""
     import rospy

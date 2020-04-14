@@ -1,4 +1,4 @@
-from displayarray.frame.frame_publishing import pub_cam_loop, pub_cam_thread
+from displayarray.frame.frame_publishing import pub_cam_loop_opencv, pub_cam_thread
 import displayarray
 import mock
 import pytest
@@ -12,7 +12,7 @@ import displayarray.frame.frame_publishing as fpub
 def test_pub_cam_loop_exit():
     not_a_camera = mock.MagicMock()
     with pytest.raises(TypeError):
-        pub_cam_loop(not_a_camera)
+        pub_cam_loop_opencv(not_a_camera)
 
 
 def test_pub_cam_int():
@@ -38,7 +38,7 @@ def test_pub_cam_int():
 
         cam_0 = subd.CV_CAMS_DICT["0"] = subd.Cam("0")
         with mock.patch.object(cam_0.frame_pub, "publish") as cam_pub:
-            pub_cam_loop(0, high_speed=False)
+            pub_cam_loop_opencv(0, high_speed=False)
 
             cam_pub.assert_has_calls([mock.call(img)] * 4)
 
@@ -79,7 +79,7 @@ def test_pub_cam_fail():
         with mock.patch.object(
             subd.CV_CAMS_DICT["0"].status_pub, "publish"
         ) as mock_fail_pub:
-            pub_cam_loop(0, high_speed=False)
+            pub_cam_loop_opencv(0, high_speed=False)
 
             mock_fail_pub.assert_called_once_with("failed")
 
@@ -100,7 +100,7 @@ def test_pub_cam_high_speed():
 
         mock_is_open.return_value = False
 
-        pub_cam_loop(0, request_size=(640, 480), high_speed=True)
+        pub_cam_loop_opencv(0, request_size=(640, 480), high_speed=True)
 
         mock_cam_set.assert_has_calls(
             [
@@ -130,7 +130,7 @@ def test_pub_cam_numpy():
         mock_uidfs.return_value = "0"
         cam_0 = subd.CV_CAMS_DICT["0"] = subd.Cam("0")
         with mock.patch.object(cam_0.frame_pub, "publish") as cam_pub:
-            pub_cam_loop(img)
+            pub_cam_loop_opencv(img)
             cam_pub.assert_has_calls([mock.call(img)] * 3)
         subd.CV_CAMS_DICT = {}
 
@@ -145,6 +145,6 @@ def test_pub_cam_thread():
         pub_cam_thread(5)
 
         mock_thread.assert_called_once_with(
-            target=fpub.pub_cam_loop, args=(5, (-1, -1), True, float("inf"))
+            target=fpub.pub_cam_loop_opencv, args=(5, (-1, -1), True, float("inf"))
         )
         thread_instance.start.assert_called_once()
