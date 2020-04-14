@@ -1,14 +1,14 @@
-from displayarray import read_updates, end_feeds
+from displayarray import read_updates, display
 import time
 import cProfile
 from examples.videos import test_video
 
 
-def profile_reading(total_seconds=2):
+def profile_reading(total_seconds=5):
     t_init = t01 = time.time()
     times = []
     started = False
-    for up in read_updates(test_video, size=(1, 1)):
+    for up in display(0, size=(9999, 9999)):
         if up:
             t1 = time.time()
             if started:
