@@ -35,7 +35,7 @@ class SubscriberWindows(object):
         """Create the array displaying window."""
         self.source_names: List[Union[str, int]] = []
         self.close_threads: Optional[List[Thread]] = []
-        self.frames: List[np.ndarray] = []
+        self.frames: Dict[Union[str, int], np.ndarray] = {}
         self.input_vid_global_names: List[str] = []
         self.window_names: List[str] = []
         self.input_cams: List[str] = []
@@ -117,71 +117,98 @@ class SubscriberWindows(object):
         mousey = MouseEvent(event, x, y, flags, param)
         window_commands.mouse_pub.publish(mousey)
 
-    def display_frames(self, frames, win_num=0, ids=None):
+    def display_frames(self, frames, win_num=0, prepend_name=""):
         """Display a list of frames on multiple windows."""
         if isinstance(frames, Exception):
             raise frames
-        for f in range(len(frames)):
-            # detect nested:
-            if (
-                isinstance(frames[f], (list, tuple))
-                or frames[f].dtype.num == 17
-                or (
-                    len(frames[f].shape) != 2
-                    and (len(frames[f].shape) != 3 or frames[f].shape[-1] != 3)
-                )
-            ):
-                win_num = self.display_frames(frames[f], win_num, ids)
-            else:
-                if len(self.window_names) <= win_num:
-                    self.add_window(str(win_num))
-                cv2.imshow(
-                    self.window_names[win_num] + " (press ESC to quit)", frames[f]
-                )
-                win_num += 1
+        if isinstance(frames, dict):
+            for f_name, f in frames.items():
+                for i in range(len(f)):
+                    # detect nested:
+                    if (
+                        isinstance(f[i], (list, tuple))
+                        or f[i].dtype.num == 17
+                        or (
+                            len(f[i].shape) != 2
+                            and (len(f[i].shape) != 3 or f[i].shape[-1] != 3)
+                        )
+                    ):
+                        win_num = self.display_frames(
+                            f[i], win_num, prepend_name=f"{f_name} - "
+                        )
+                    else:
+                        if len(self.window_names) <= win_num:
+                            self.add_window(f"{prepend_name}{win_num}")
+                        cv2.imshow(
+                            self.window_names[win_num] + " (press ESC to quit)", f[i]
+                        )
+                        win_num += 1
+        else:
+            for f in range(len(frames)):
+                # detect nested:
+                if (
+                    isinstance(frames[f], (list, tuple))
+                    or frames[f].dtype.num == 17
+                    or (
+                        len(frames[f].shape) != 2
+                        and (len(frames[f].shape) != 3 or frames[f].shape[-1] != 3)
+                    )
+                ):
+                    win_num = self.display_frames(frames[f], win_num, prepend_name)
+                else:
+                    if len(self.window_names) <= win_num:
+                        self.add_window(f"{prepend_name} {win_num}")
+                    cv2.imshow(
+                        self.window_names[win_num] + " (press ESC to quit)", frames[f]
+                    )
+                    win_num += 1
         return win_num
 
     def __check_too_many_channels(self):
-        for f in range(len(self.frames)):
-            if isinstance(self.frames[f], Exception):
-                raise self.frames[f]
-            if (
-                isinstance(self.frames[f], np.ndarray)
-                and self.frames[f].shape[-1] not in [1, 3]
-                and len(self.frames[f].shape) != 2
-            ):
-                print(
-                    f"Too many channels in output. (Got {self.frames[f].shape[-1]} instead of 1 or 3.) "
-                    f"Frame selection callback added."
-                )
-                print(
-                    "Ctrl+scroll to change first channel.\n"
-                    "Shift+scroll to change second channel.\n"
-                    "Alt+scroll to change third channel."
-                )
-                sel = SelectChannels()
-                sel.enable_mouse_control()
-                sel.mouse_print_channels = True
-                self.callbacks.append(sel)
-                for fr in range(len(self.frames)):
-                    self.frames[fr] = self.callbacks[-1](self.frames[fr])
-                break
+        for f_name, f in self.frames.items():
+            for i in range(len(f)):
+                if isinstance(f[i], Exception):
+                    raise f[i]
+                if (
+                    isinstance(f[i], np.ndarray)
+                    and f[i].shape[-1] not in [1, 3]
+                    and len(f[i].shape) != 2
+                ):
+                    print(
+                        f"Too many channels in output. (Got {f[i].shape[-1]} instead of 1 or 3.) "
+                        f"Frame selection callback added."
+                    )
+                    print(
+                        "Ctrl+scroll to change first channel.\n"
+                        "Shift+scroll to change second channel.\n"
+                        "Alt+scroll to change third channel."
+                    )
+                    sel = SelectChannels()
+                    sel.enable_mouse_control()
+                    sel.mouse_print_channels = True
+                    self.callbacks.append(sel)
+                    for fr in range(len(f)):
+                        f[fr] = self.callbacks[-1](f[fr])
+                    break
 
     def update_frames(self):
         """Update the windows with the newest data for all frames."""
-        self.frames = []
+        self.frames = {}
+
         for i in range(len(self.input_vid_global_names)):
             if self.input_vid_global_names[i] in self.FRAME_DICT and not isinstance(
                 self.FRAME_DICT[self.input_vid_global_names[i]], NoData
             ):
-                self.frames.append(self.FRAME_DICT[self.input_vid_global_names[i]])
-                if isinstance(self.frames, np.ndarray) and len(self.frames.shape) <= 3:
-                    self.frames = [self.frames]
+                if self.input_vid_global_names[i] not in self.frames.keys():
+                    self.frames[self.input_vid_global_names[i]] = []
+                self.frames[self.input_vid_global_names[i]].append(
+                    self.FRAME_DICT[self.input_vid_global_names[i]]
+                )
                 if len(self.callbacks) > 0:
                     for c in self.callbacks:
-                        frame = c(self.frames[-1])
+                        frame = c(self.frames[self.input_vid_global_names[i]][-1])
                         if frame is not None:
-                            self.frames[-1] = frame
+                            self.frames[self.input_vid_global_names[i]][-1] = frame
                 if not self.silent:
                     self.__check_too_many_channels()
                 self.FRAME_DICT[self.input_vid_global_names[i]] = NoData()

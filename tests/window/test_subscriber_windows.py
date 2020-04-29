@@ -193,7 +193,7 @@ def test_update_frames():
 
         sw.update_frames()
 
-        assert sw.frames == [frame]
+        assert sw.frames == {"0": [frame]}
         mock_imshow.assert_called_once_with("displayarray (press ESC to quit)", frame)
 
 
@@ -219,7 +219,7 @@ def test_update_frames_callback():
 
         sw.update_frames()
 
-        assert sw.frames == [frame3, frame3]
+        assert sw.frames == {"0": [frame3], "1": [frame3]}
         assert np.all(cb.mock_calls[0].args[0] == frame)
         assert np.all(cb2.mock_calls[0].args[0] == frame2)
         mock_imshow.assert_has_calls(
@@ -260,7 +260,7 @@ def test_update_frames_too_many_channels():
         assert isinstance(sw.callbacks[-1], SelectChannels)
         assert sw.callbacks[-1].mouse_control is not None
         assert sw.callbacks[-1].mouse_print_channels is True
-        assert sw.frames[0].shape[-1] == 3
+        assert sw.frames["0"][0].shape[-1] == 3
 
 
 def test_update_frames_nested():
@@ -275,47 +275,47 @@ def test_update_frames_nested():
 
         sw.update_frames()
 
-        assert np.all(sw.frames[0] == np.ones((20, 100, 100, 3)))
+        assert np.all(sw.frames["0"][0] == np.ones((20, 100, 100, 3)))
         assert len(sw.frames) == 1
         assert mock_imshow.mock_calls[0].args[0] == "displayarray (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[0].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[1].args[0] == "1 (press ESC to quit)"
+        assert mock_imshow.mock_calls[1].args[0] == "0 -  1 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[1].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[2].args[0] == "2 (press ESC to quit)"
+        assert mock_imshow.mock_calls[2].args[0] == "0 -  2 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[2].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[3].args[0] == "3 (press ESC to quit)"
+        assert mock_imshow.mock_calls[3].args[0] == "0 -  3 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[3].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[4].args[0] == "4 (press ESC to quit)"
+        assert mock_imshow.mock_calls[4].args[0] == "0 -  4 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[4].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[5].args[0] == "5 (press ESC to quit)"
+        assert mock_imshow.mock_calls[5].args[0] == "0 -  5 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[5].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[6].args[0] == "6 (press ESC to quit)"
+        assert mock_imshow.mock_calls[6].args[0] == "0 -  6 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[6].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[7].args[0] == "7 (press ESC to quit)"
+        assert mock_imshow.mock_calls[7].args[0] == "0 -  7 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[7].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[8].args[0] == "8 (press ESC to quit)"
+        assert mock_imshow.mock_calls[8].args[0] == "0 -  8 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[8].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[9].args[0] == "9 (press ESC to quit)"
+        assert mock_imshow.mock_calls[9].args[0] == "0 -  9 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[9].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[10].args[0] == "10 (press ESC to quit)"
+        assert mock_imshow.mock_calls[10].args[0] == "0 -  10 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[10].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[11].args[0] == "11 (press ESC to quit)"
+        assert mock_imshow.mock_calls[11].args[0] == "0 -  11 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[11].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[12].args[0] == "12 (press ESC to quit)"
+        assert mock_imshow.mock_calls[12].args[0] == "0 -  12 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[12].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[13].args[0] == "13 (press ESC to quit)"
+        assert mock_imshow.mock_calls[13].args[0] == "0 -  13 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[13].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[14].args[0] == "14 (press ESC to quit)"
+        assert mock_imshow.mock_calls[14].args[0] == "0 -  14 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[14].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[15].args[0] == "15 (press ESC to quit)"
+        assert mock_imshow.mock_calls[15].args[0] == "0 -  15 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[15].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[16].args[0] == "16 (press ESC to quit)"
+        assert mock_imshow.mock_calls[16].args[0] == "0 -  16 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[16].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[17].args[0] == "17 (press ESC to quit)"
+        assert mock_imshow.mock_calls[17].args[0] == "0 -  17 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[17].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[18].args[0] == "18 (press ESC to quit)"
+        assert mock_imshow.mock_calls[18].args[0] == "0 -  18 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[18].args[1] == np.ones((100, 100, 3)))
-        assert mock_imshow.mock_calls[19].args[0] == "19 (press ESC to quit)"
+        assert mock_imshow.mock_calls[19].args[0] == "0 -  19 (press ESC to quit)"
         assert np.all(mock_imshow.mock_calls[19].args[1] == np.ones((100, 100, 3)))
 
 
