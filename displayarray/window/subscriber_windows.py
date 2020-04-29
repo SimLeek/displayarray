@@ -146,7 +146,8 @@ class SubscriberWindows(object):
             if isinstance(self.frames[f], Exception):
                 raise self.frames[f]
             if (
-                self.frames[f].shape[-1] not in [1, 3]
+                isinstance(self.frames[f], np.ndarray)
+                and self.frames[f].shape[-1] not in [1, 3]
                 and len(self.frames[f].shape) != 2
             ):
                 print(
