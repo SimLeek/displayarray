@@ -75,7 +75,7 @@ def test_callback_exception():
         frame[:, :, 2] = 1 / 0
 
     with pytest.raises(ZeroDivisionError) as e:
-        v = fup.FrameUpdater(np.zeros((1, 1, 3)), callbacks=redden_frame_print_spam)
+        v = fup.FrameUpdater(np.zeros((1, 2, 3)), callbacks=redden_frame_print_spam)
         v.loop()
     assert e.errisinstance(ZeroDivisionError)
 
@@ -92,8 +92,6 @@ def test_display():
 
             mock_sub_win.assert_called_once_with(video_sources=["0"], callbacks=[])
             mock_sub_win_instance.loop.assert_called_once()
-            f.start.assert_called_once()
-            f.join.assert_called_once()
 
 
 def test_display_exception():
@@ -109,6 +107,7 @@ def test_display_exception():
             v = fup.FrameUpdater(np.zeros((1, 1, 3)), callbacks=redden_frame_print_spam)
             v.display()
         assert e.errisinstance(ZeroDivisionError)
+        # todo: clear the frame dict so that these don't hang forever
 
 
 from displayarray.window.window_commands import win_cmd_pub

@@ -91,14 +91,18 @@ class FrameUpdater(threading.Thread):
         sub_cam = subscriber_dictionary.cam_frame_sub(str(self.cam_id))
         sub_owner = subscriber_dictionary.handler_cmd_sub(str(self.cam_id))
         msg_owner = sub_owner.return_on_no_data = ""
-        while msg_owner != "quit":
-            frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
-            self.__apply_callbacks_to_frame(frame)
-            msg_owner = sub_owner.get()
-        sub_owner.release()
-        sub_cam.release()
-        subscriber_dictionary.stop_cam(self.cam_id)
-        t.join()
+        try:
+            while msg_owner != "quit":
+                frame = sub_cam.get(blocking=True, timeout=1.0)  # type: np.ndarray
+                self.__apply_callbacks_to_frame(frame)
+                msg_owner = sub_owner.get()
+        except Exception as e:
+            raise e
+        finally:
+            sub_owner.release()
+            sub_cam.release()
+            subscriber_dictionary.stop_cam(self.cam_id)
+            t.join()
 
     def display(self, callbacks: List[Callable[[np.ndarray], Any]] = None):
         """
