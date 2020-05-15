@@ -211,7 +211,6 @@ class SubscriberWindows(object):
                             self.frames[self.input_vid_global_names[i]][-1] = frame
                 if not self.silent:
                     self.__check_too_many_channels()
-                self.FRAME_DICT[self.input_vid_global_names[i]] = NoData()
         if not self.silent:
             self.display_frames(self.frames)
 

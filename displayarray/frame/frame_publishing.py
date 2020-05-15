@@ -1,11 +1,12 @@
 """Publish frames so any function within this program can find them."""
 
+import asyncio
+import sys
 import threading
 import time
-import asyncio
-import cv2
 import warnings
-import sys
+
+import cv2
 
 using_pyv4l2cam = False
 try:
@@ -123,6 +124,7 @@ def pub_cam_loop_opencv(
     request_size: Tuple[int, int] = (-1, -1),
     high_speed: bool = True,
     fps_limit: float = float("inf"),
+    extra: Optional[List[Tuple[int, int]]] = None,
 ) -> bool:
     """
     Publish whichever camera you select to CVCams.<cam_id>.Vid.
@@ -186,6 +188,9 @@ def pub_cam_loop_opencv(
     return True
 
 
+uid_dict: Dict[str, threading.Thread] = {}
+
+
 def pub_cam_thread(
     cam_id: Union[int, str],
     request_ize: Tuple[int, int] = (-1, -1),
@@ -194,22 +199,27 @@ def pub_cam_thread(
 ) -> threading.Thread:
     """Run pub_cam_loop in a new thread. Starts on creation."""
 
-    if (
-        sys.platform == "linux"
-        and using_pyv4l2cam
-        and (
-            isinstance(cam_id, int)
-            or (isinstance(cam_id, str) and "/dev/video" in cam_id)
-        )
-    ):
-        pub_cam_loop = pub_cam_loop_pyv4l2
+    name = uid_for_source(cam_id)
+    if name in uid_dict.keys():
+        t = uid_dict[name]
     else:
-        pub_cam_loop = pub_cam_loop_opencv
+        if (
+            sys.platform == "linux"
+            and using_pyv4l2cam
+            and (
+                isinstance(cam_id, int)
+                or (isinstance(cam_id, str) and "/dev/video" in cam_id)
+            )
+        ):
+            pub_cam_loop = pub_cam_loop_pyv4l2
+        else:
+            pub_cam_loop = pub_cam_loop_opencv
 
-    t = threading.Thread(
-        target=pub_cam_loop, args=(cam_id, request_ize, high_speed, fps_limit)
-    )
-    t.start()
+        t = threading.Thread(
+            target=pub_cam_loop, args=(cam_id, request_ize, high_speed, fps_limit)
+        )
+        uid_dict[name] = t
+        t.start()
     return t
 
 
