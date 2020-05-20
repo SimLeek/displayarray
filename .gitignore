@@ -108,3 +108,4 @@ venv.bak/
 .idea/
 .pytest_cache/
 .coveragerc
+*.mp4
