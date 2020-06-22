@@ -16,6 +16,7 @@ jobs:
       - uses: dschep/install-poetry-action@v1.2
       - name: Install and build
         run: pip install .
+             pip install wheel
       - name: Build with Poetry
         run: python setup.py sdist bdist_wheel
       - name: Publish distribution 📦 to Test PyPI
