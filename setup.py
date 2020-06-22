@@ -47,7 +47,9 @@ setup(
         "pyzmq==18.1.0",
     ],
     extras_require={
-        "linux": ["PyV4L2Cam @ git+https://github.com/SimLeek/PyV4L2Cam"],
+        # pypi doesn't allow direct dependencies for security reasons,
+        # even though I could install a lot of viruses just from this setup.py
+        # "linux": ["PyV4L2Cam @ git+https://github.com/SimLeek/PyV4L2Cam"],
         "dev": [
             "black==18.*,>=18.3.0.a0",
             "coverage==4.*,>=4.5.0",
@@ -59,6 +61,7 @@ setup(
             "tox==3.*,>=3.14.0",
             "tox-gh-actions==0.*,>=0.3.0",
             "typing==3.7.4.1",
+            "wheel==0.*,>=0.30.0"
         ],
     },
 )
