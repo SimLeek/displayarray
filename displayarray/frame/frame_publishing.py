@@ -61,7 +61,7 @@ def pub_cam_loop_pyv4l2(
             )
         else:
             if "usb" in cam_id:
-                cam = get_camera_by_bus_info(cam_id, *request_size)
+                cam = get_camera_by_bus_info(cam_id, *request_size)  # type: ignore
             else:
                 cam = get_camera_by_string(cam_id, *request_size)  # type: ignore
     else:
@@ -85,9 +85,9 @@ def pub_cam_loop_pyv4l2(
         frame_bytes = cam.get_frame()  # type: bytes
 
         if cam.pixel_format == "MJPEG":
-            nd_frame = convert_mjpeg(frame_bytes)
+            nd_frame = convert_mjpeg(frame_bytes)  # type: ignore
         elif cam.pixel_format == "RGB24":
-            nd_frame = convert_rgb24(frame_bytes, cam.width, cam.height)
+            nd_frame = convert_rgb24(frame_bytes, cam.width, cam.height)  # type: ignore
         else:
             raise NotImplementedError(f"{cam.pixel_format} format not supported.")
 
