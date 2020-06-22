@@ -20,22 +20,23 @@ class CamHandler(object):
 class Cam(object):
     """A camera publisher instance that will send frames, status, and commands out."""
 
-    def __init__(self, name):
+    def __init__(self, name, cam_instance=None):
         """Create the cam."""
         self.name = name
         self.cmd = None
         self.frame_pub = VariablePub()
         self.cmd_pub = VariablePub()
         self.status_pub = VariablePub()
+        self.cam_instance = cam_instance
 
 
 CV_CAM_HANDLERS_DICT: Dict[str, CamHandler] = {}
 CV_CAMS_DICT: Dict[str, Cam] = {}
 
 
-def register_cam(cam_id):
+def register_cam(cam_id, cam_instance=None):
     """Register camera "cam_id" to a global list so it can be picked up."""
-    cam = Cam(str(cam_id))
+    cam = Cam(str(cam_id), cam_instance)
     CV_CAMS_DICT[str(cam_id)] = cam
     CV_CAM_HANDLERS_DICT[str(cam_id)] = CamHandler(
         str(cam_id), cam.frame_pub.make_sub()

@@ -14,10 +14,10 @@ jobs:
         with:
           python-version: 3.7
       - uses: dschep/install-poetry-action@v1.2
-      - name: Install dependencies
-        run: poetry install
+      - name: Install and build
+        run: pip install .
       - name: Build with Poetry
-        run: poetry build
+        run: python setup.py sdist bdist_wheel
       - name: Publish distribution 📦 to Test PyPI
         uses: pypa/gh-action-pypi-publish@master
         with:
