@@ -19,6 +19,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: pip install .[dev]
+        run: pip install .[dev] --user
       - name: Test with tox
         run: tox -p auto -o
