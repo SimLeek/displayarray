@@ -19,7 +19,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: python -m ensurepip --user
+        run: |
+             python -m ensurepip --user
              python -m pip install --upgrade pip --user
              python -m pip install .[dev]
       - name: Test with tox
