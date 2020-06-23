@@ -42,7 +42,7 @@ def test_pub_cam_int():
 
             cam_pub.assert_has_calls([mock.call(img)] * 4)
 
-            reg_cam.assert_called_once_with("0")
+            reg_cam.assert_called_once_with("0", cap)
             cam_cmd_sub.assert_called_once_with("0")
 
             cap.set.assert_has_calls(

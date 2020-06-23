@@ -9,7 +9,7 @@ def black_and_white(arr):
 import time
 
 t0 = t1 = time.time()
-for up in display(0, size=(1, 1), callbacks=black_and_white):
+for up in display("usb-0000:00:14.0-7"):
     if up:
         t1 = time.time()
         print(1.0 / (t1 - t0))

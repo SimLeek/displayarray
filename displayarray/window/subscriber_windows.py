@@ -13,10 +13,21 @@ from displayarray._uid import uid_for_source
 from displayarray.frame import subscriber_dictionary
 from displayarray.frame.frame_updater import FrameCallable
 from displayarray.frame.frame_updater import FrameUpdater
+from displayarray.frame.subscriber_dictionary import CV_CAMS_DICT
 from displayarray.input import MouseEvent
 from displayarray.window import window_commands
 from displayarray._util import WeakMethod
 from displayarray.effects.select_channels import SelectChannels
+
+try:
+    import sys
+
+    if sys.platform == "linux":
+        from PyV4L2Cam.get_camera import get_bus_info_from_camera  # type: ignore
+    else:
+        get_bus_info_from_camera = None
+except:
+    get_bus_info_from_camera = None
 
 
 class SubscriberWindows(object):
@@ -266,12 +277,26 @@ class SubscriberWindows(object):
         window_commands.quit(force_all_read=False)
         self.__stop_all_cams()
 
+    @property
+    def cams(self):
+        """Get the camera instances. Can be used for OpenCV or V4L2 functions, depending on backend."""
+        return [CV_CAMS_DICT[v].cam_instance for v in self.input_vid_global_names]
+
+    @property
+    def busses(self):
+        """Get the busses the cameras are plugged into. Can be used as UIDs. Requires V4L2 backend."""
+        if get_bus_info_from_camera is not None:
+            return [get_bus_info_from_camera(c) for c in self.cams]
+        else:
+            raise RuntimeError("Getting bus info not supported on this system")
+
 
 def _get_video_callback_dict_threads(
     *vids,
     callbacks: Optional[Dict[Any, Union[FrameCallable, List[FrameCallable]]]] = None,
     fps=float("inf"),
     size=(-1, -1),
+    force_backend="",
 ):
     assert callbacks is not None
     vid_threads = []
@@ -289,7 +314,13 @@ def _get_video_callback_dict_threads(
             elif callable(callbacks[v]):
                 v_callbacks.append(callbacks[v])  # type: ignore
         vid_threads.append(
-            FrameUpdater(v, callbacks=v_callbacks, fps_limit=fps, request_size=size)
+            FrameUpdater(
+                v,
+                callbacks=v_callbacks,
+                fps_limit=fps,
+                request_size=size,
+                force_backend=force_backend,
+            )
         )
     return vid_threads
 
@@ -305,6 +336,7 @@ def _get_video_threads(
     ] = None,
     fps=float("inf"),
     size=(-1, -1),
+    force_backend="",
 ):
     vid_threads: List[Thread] = []
     if isinstance(callbacks, Dict):
@@ -314,17 +346,33 @@ def _get_video_threads(
     elif isinstance(callbacks, List):
         for v in vids:
             vid_threads.append(
-                FrameUpdater(v, callbacks=callbacks, fps_limit=fps, request_size=size)
+                FrameUpdater(
+                    v,
+                    callbacks=callbacks,
+                    fps_limit=fps,
+                    request_size=size,
+                    force_backend=force_backend,
+                )
             )
     elif callable(callbacks):
         for v in vids:
             vid_threads.append(
-                FrameUpdater(v, callbacks=[callbacks], fps_limit=fps, request_size=size)
+                FrameUpdater(
+                    v,
+                    callbacks=[callbacks],
+                    fps_limit=fps,
+                    request_size=size,
+                    force_backend=force_backend,
+                )
             )
     else:
         for v in vids:
             if v is not None:
-                vid_threads.append(FrameUpdater(v, fps_limit=fps, request_size=size))
+                vid_threads.append(
+                    FrameUpdater(
+                        v, fps_limit=fps, request_size=size, force_backend=force_backend
+                    )
+                )
     return vid_threads
 
 
@@ -342,6 +390,7 @@ def display(
     fps_limit=float("inf"),
     size=(-1, -1),
     silent=False,
+    force_backend="",
 ):
     """
     Display all the arrays, cameras, and videos passed in.
@@ -351,7 +400,11 @@ def display(
     Window names end up becoming the title of the windows
     """
     vid_threads = _get_video_threads(
-        *vids, callbacks=callbacks, fps=fps_limit, size=size
+        *vids,
+        callbacks=callbacks,
+        fps=fps_limit,
+        size=size,
+        force_backend=force_backend,
     )
     for v in vid_threads:
         v.start()

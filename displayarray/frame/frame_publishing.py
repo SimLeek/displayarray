@@ -11,8 +11,10 @@ import cv2
 using_pyv4l2cam = False
 try:
     if sys.platform == "linux":
-        from PyV4L2Cam.camera import Camera as pyv4lcamera
-        from PyV4L2Cam.controls import ControlIDs as pyv4lcontrolids
+        from PyV4L2Cam.camera import Camera as pyv4lcamera  # type: ignore
+        from PyV4L2Cam.controls import ControlIDs as pyv4lcontrolids  # type: ignore
+        from PyV4L2Cam import convert_mjpeg, convert_rgb24  # type: ignore
+        from PyV4L2Cam.get_camera import get_camera_by_bus_info, get_camera_by_string  # type: ignore
 
         using_pyv4l2cam = True
 except ImportError:
@@ -30,25 +32,6 @@ from displayarray._uid import uid_for_source
 from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
-
-
-def _v4l2_convert_mjpeg(mjpeg: bytes) -> Optional[np.ndarray]:
-    # Thanks: https://stackoverflow.com/a/21844162
-    a = mjpeg.find(b"\xff\xd8")
-    b = mjpeg.find(b"\xff\xd9")
-
-    if a == -1 or b == -1:
-        return None
-    else:
-        jpg = mjpeg[a : b + 2]
-        frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-        return frame
-
-
-def _v4l2_convert_rgb24(rgb24: bytes, width: int, height: int) -> Optional[np.ndarray]:
-    nparr = np.frombuffer(rgb24, np.uint8)
-    np_frame = nparr.reshape((height, width, 3))
-    return np_frame
 
 
 def pub_cam_loop_pyv4l2(
@@ -77,13 +60,16 @@ def pub_cam_loop_pyv4l2(
                 f"/dev/video{cam_id}", *request_size
             )
         else:
-            cam = pyv4lcamera(cam_id, *request_size)  # type: ignore
+            if "usb" in cam_id:
+                cam = get_camera_by_bus_info(cam_id, *request_size)  # type: ignore
+            else:
+                cam = get_camera_by_string(cam_id, *request_size)  # type: ignore
     else:
         raise TypeError(
             "Only strings or ints representing cameras are supported with v4l2."
         )
 
-    subscriber_dictionary.register_cam(name)
+    subscriber_dictionary.register_cam(name, cam)
 
     sub = subscriber_dictionary.cam_cmd_sub(name)
     sub.return_on_no_data = ""
@@ -99,9 +85,9 @@ def pub_cam_loop_pyv4l2(
         frame_bytes = cam.get_frame()  # type: bytes
 
         if cam.pixel_format == "MJPEG":
-            nd_frame = _v4l2_convert_mjpeg(frame_bytes)
+            nd_frame = convert_mjpeg(frame_bytes)  # type: ignore
         elif cam.pixel_format == "RGB24":
-            nd_frame = _v4l2_convert_rgb24(frame_bytes, cam.width, cam.height)
+            nd_frame = convert_rgb24(frame_bytes, cam.width, cam.height)  # type: ignore
         else:
             raise NotImplementedError(f"{cam.pixel_format} format not supported.")
 
@@ -149,7 +135,7 @@ def pub_cam_loop_opencv(
             "Only strings or ints representing cameras, or numpy arrays representing pictures supported."
         )
 
-    subscriber_dictionary.register_cam(name)
+    subscriber_dictionary.register_cam(name, cam)
 
     frame_counter = 0
 
@@ -158,7 +144,10 @@ def pub_cam_loop_opencv(
     msg = ""
 
     if high_speed:
-        cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
+        try:
+            cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
+        except AttributeError:
+            warnings.warn("Please update OpenCV")
 
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, request_size[0])
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
@@ -196,6 +185,7 @@ def pub_cam_thread(
     request_ize: Tuple[int, int] = (-1, -1),
     high_speed: bool = True,
     fps_limit: float = float("inf"),
+    force_backend="",
 ) -> threading.Thread:
     """Run pub_cam_loop in a new thread. Starts on creation."""
 
@@ -203,15 +193,20 @@ def pub_cam_thread(
     if name in uid_dict.keys():
         t = uid_dict[name]
     else:
-        if (
+        if "cv" in force_backend.lower():
+            pub_cam_loop = pub_cam_loop_opencv
+        elif (
             sys.platform == "linux"
             and using_pyv4l2cam
             and (
                 isinstance(cam_id, int)
-                or (isinstance(cam_id, str) and "/dev/video" in cam_id)
+                or (
+                    isinstance(cam_id, str)
+                    and any(["/dev/video" in cam_id, "usb" in cam_id])
+                )
             )
-        ):
-            pub_cam_loop = pub_cam_loop_pyv4l2
+        ) or "v4l2" in force_backend.lower():
+            pub_cam_loop = pub_cam_loop_pyv4l2  # type: ignore
         else:
             pub_cam_loop = pub_cam_loop_opencv
 

@@ -495,8 +495,12 @@ def test_display():
 
         fup.assert_has_calls(
             [
-                mock.call(0, fps_limit=float("inf"), request_size=(50, 50)),
-                mock.call(1, fps_limit=float("inf"), request_size=(50, 50)),
+                mock.call(
+                    0, force_backend="", fps_limit=float("inf"), request_size=(50, 50)
+                ),
+                mock.call(
+                    1, force_backend="", fps_limit=float("inf"), request_size=(50, 50)
+                ),
             ]
         )
         assert fup_inst.start.call_count == 2
@@ -541,10 +545,18 @@ def test_display_callbacks():
         fup.assert_has_calls(
             [
                 mock.call(
-                    0, callbacks=[cb], fps_limit=float("inf"), request_size=(-1, -1)
+                    0,
+                    callbacks=[cb],
+                    force_backend="",
+                    fps_limit=float("inf"),
+                    request_size=(-1, -1),
                 ),
                 mock.call(
-                    1, callbacks=[cb], fps_limit=float("inf"), request_size=(-1, -1)
+                    1,
+                    callbacks=[cb],
+                    force_backend="",
+                    fps_limit=float("inf"),
+                    request_size=(-1, -1),
                 ),
             ]
         )
@@ -557,8 +569,20 @@ def test_display_callbacks():
 
         fup.assert_has_calls(
             [
-                mock.call(0, callbacks=[cb, cb2], fps_limit=60, request_size=(-1, -1)),
-                mock.call(1, callbacks=[cb, cb2], fps_limit=60, request_size=(-1, -1)),
+                mock.call(
+                    0,
+                    callbacks=[cb, cb2],
+                    force_backend="",
+                    fps_limit=60,
+                    request_size=(-1, -1),
+                ),
+                mock.call(
+                    1,
+                    callbacks=[cb, cb2],
+                    force_backend="",
+                    fps_limit=60,
+                    request_size=(-1, -1),
+                ),
             ]
         )
 
@@ -579,16 +603,25 @@ def test_display_callbacks_dict():
         fup.assert_has_calls(
             [
                 mock.call(
-                    0, callbacks=[cb1], fps_limit=float("inf"), request_size=(-1, -1)
-                ),
-                mock.call(
-                    1,
-                    callbacks=[cb1, cb2],
+                    0,
+                    callbacks=[cb1],
+                    force_backend="",
                     fps_limit=float("inf"),
                     request_size=(-1, -1),
                 ),
                 mock.call(
-                    2, callbacks=[cb3], fps_limit=float("inf"), request_size=(-1, -1)
+                    1,
+                    callbacks=[cb1, cb2],
+                    force_backend="",
+                    fps_limit=float("inf"),
+                    request_size=(-1, -1),
+                ),
+                mock.call(
+                    2,
+                    callbacks=[cb3],
+                    force_backend="",
+                    fps_limit=float("inf"),
+                    request_size=(-1, -1),
                 ),
             ]
         )

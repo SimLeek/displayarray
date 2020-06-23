@@ -27,6 +27,7 @@ class FrameUpdater(threading.Thread):
         request_size: Tuple[int, int] = (-1, -1),
         high_speed: bool = True,
         fps_limit: float = float("inf"),
+        force_backend="",
     ):
         """Create the frame updater thread."""
         super(FrameUpdater, self).__init__(target=self.loop, args=())
@@ -42,6 +43,7 @@ class FrameUpdater(threading.Thread):
         self.high_speed = high_speed
         self.fps_limit = fps_limit
         self.exception_raised = None
+        self.force_backend = force_backend
 
     def __wait_for_cam_id(self):
         while str(self.cam_id) not in subscriber_dictionary.CV_CAMS_DICT:
@@ -84,7 +86,11 @@ class FrameUpdater(threading.Thread):
     def loop(self):
         """Continually get frames from the video publisher, run callbacks on them, and listen to commands."""
         t = pub_cam_thread(
-            self.video_source, self.request_size, self.high_speed, self.fps_limit
+            self.video_source,
+            self.request_size,
+            self.high_speed,
+            self.fps_limit,
+            self.force_backend,
         )
         self.__wait_for_cam_id()
 
