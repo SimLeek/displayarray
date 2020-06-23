@@ -51,7 +51,6 @@ setup(
         # even though I could install a lot of viruses just from this setup.py
         # "linux": ["PyV4L2Cam @ git+https://github.com/SimLeek/PyV4L2Cam"],
         "dev": [
-            "pip==18.1",
             "black==18.*,>=18.3.0.a0",
             "coverage==4.*,>=4.5.0",
             "mock==3.*,>=3.0.0",
