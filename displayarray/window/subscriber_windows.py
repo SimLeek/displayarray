@@ -29,6 +29,12 @@ try:
 except:
     get_bus_info_from_camera = None
 
+try:
+    import zmq
+    from tensorcom.tenbin import encode_buffer
+except:
+    warnings.warn("Could not import ZMQ and tensorcom. Cannot send messages between programs.")
+
 
 class SubscriberWindows(object):
     """Windows that subscribe to updates to cameras, videos, and arrays."""
@@ -52,6 +58,9 @@ class SubscriberWindows(object):
         self.input_cams: List[str] = []
         self.exited = False
         self.silent = silent
+        self.ctx = None
+        self.sock_list = []
+        self.top_list = []
 
         if callbacks is None:
             callbacks = []
@@ -237,6 +246,11 @@ class SubscriberWindows(object):
         self.update_frames()
         msg_cmd = sub_cmd.get()
         key = self.handle_keys(cv2.waitKey(1))
+        if self.sock_list:
+            for s, t in zip(self.sock_list, self.top_list):
+                f = list(self.frames.values())
+                if f:
+                    s.send_multipart([t, encode_buffer(f[0])])
         return msg_cmd, key
 
     def wait_for_init(self):
@@ -276,6 +290,13 @@ class SubscriberWindows(object):
         sub_cmd.release()
         window_commands.quit(force_all_read=False)
         self.__stop_all_cams()
+
+    def publish_to(self, address, topic=b""):
+        if self.ctx==None:
+            self.ctx = zmq.Context()
+        self.sock_list.append(self.ctx.socket(zmq.PUB))
+        self.sock_list[-1].bind(address)
+        self.top_list.append(topic)
 
     @property
     def cams(self):
@@ -432,3 +453,20 @@ def breakpoint_display(*args, **kwargs):
 def read_updates(*args, **kwargs):
     """Read back all frame updates and yield a list of frames. List is empty if no frames were read."""
     return display(*args, **kwargs, silent=True)
+
+
+def publish_updates(*args, address="tcp://127.0.0.1:7880", topic=b"", **kwargs):
+    """Publish all the updates to the given address and topic"""
+    if kwargs['blocking']:
+        block = True
+        kwargs['blocking'] = False
+    else:
+        block = False
+
+    r = read_updates(*args, **kwargs)
+    r.publish_to(address, topic)
+
+    if block:
+        r.loop()
+        for vt in r.close_threads:
+            vt.join()

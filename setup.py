@@ -44,7 +44,8 @@ setup(
         "localpubsub==0.0.4",
         "numpy>=1.17.0",
         "opencv-python==4.*,>=4.0.0",
-        "pyzmq==18.1.0",
+        "pyzmq>=22.0.3",
+        "tensorcom"
     ],
     extras_require={
         # pypi doesn't allow direct dependencies for security reasons,

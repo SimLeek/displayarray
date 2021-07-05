@@ -27,6 +27,7 @@ import numpy as np
 
 from displayarray.frame import subscriber_dictionary
 from .np_to_opencv import NpCam
+from .zmq_to_opencv import ZmqCam
 from displayarray._uid import uid_for_source
 
 from typing import Union, Tuple, Optional, Dict, Any, List, Callable
@@ -127,7 +128,10 @@ def pub_cam_loop_opencv(
     name = uid_for_source(cam_id)
 
     if isinstance(cam_id, (int, str)):
-        cam: Union[NpCam, cv2.VideoCapture] = cv2.VideoCapture(cam_id)
+        if isinstance(cam_id, str) and cam_id.startswith('tcp'):
+            cam = ZmqCam(cam_id)
+        else:
+            cam: Union[NpCam,ZmqCam, cv2.VideoCapture] = cv2.VideoCapture(cam_id)
     elif isinstance(cam_id, np.ndarray):
         cam = NpCam(cam_id)
     else:
@@ -216,124 +220,3 @@ def pub_cam_thread(
         uid_dict[name] = t
         t.start()
     return t
-
-
-async def publish_updates_zero_mq(
-    *vids,
-    callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
-    ] = None,
-    fps_limit=float("inf"),
-    size=(-1, -1),
-    end_callback: Callable[[], bool] = lambda: False,
-    blocking=False,
-    publishing_address="tcp://127.0.0.1:5600",
-    prepend_topic="",
-    flags=0,
-    copy=True,
-    track=False,
-):
-    """Publish frames to ZeroMQ when they're updated."""
-    import zmq
-    from displayarray import read_updates
-
-    ctx = zmq.Context()
-    s = ctx.socket(zmq.PUB)
-    s.bind(publishing_address)
-
-    if not blocking:
-        flags |= zmq.NOBLOCK
-
-    try:
-        for v in read_updates(vids, callbacks, fps_limit, size, end_callback, blocking):
-            if v:
-                for vid_name, frame in v.items():
-                    md = dict(
-                        dtype=str(frame.dtype),
-                        shape=frame.shape,
-                        name=prepend_topic + vid_name,
-                    )
-                    s.send_json(md, flags | zmq.SNDMORE)
-                    s.send(frame, flags, copy=copy, track=track)
-            if fps_limit:
-                await asyncio.sleep(1.0 / fps_limit)
-            else:
-                await asyncio.sleep(0)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        vid_names = [uid_for_source(name) for name in vids]
-        for v in vid_names:
-            subscriber_dictionary.stop_cam(v)
-
-
-async def publish_updates_ros(
-    *vids,
-    callbacks: Optional[
-        Union[Dict[Any, FrameCallable], List[FrameCallable], FrameCallable]
-    ] = None,
-    fps_limit=float("inf"),
-    size=(-1, -1),
-    end_callback: Callable[[], bool] = lambda: False,
-    blocking=False,
-    node_name="displayarray",
-    publisher_name="npy",
-    rate_hz=None,
-    dtype=None,
-):
-    """Publish frames to ROS when they're updated."""
-    import rospy
-    from rospy.numpy_msg import numpy_msg
-    import std_msgs.msg
-    from displayarray import read_updates
-
-    def get_msg_type(dtype):
-        if dtype is None:
-            msg_type = {
-                np.float32: std_msgs.msg.Float32(),
-                np.float64: std_msgs.msg.Float64(),
-                np.bool: std_msgs.msg.Bool(),
-                np.char: std_msgs.msg.Char(),
-                np.int16: std_msgs.msg.Int16(),
-                np.int32: std_msgs.msg.Int32(),
-                np.int64: std_msgs.msg.Int64(),
-                np.str: std_msgs.msg.String(),
-                np.uint16: std_msgs.msg.UInt16(),
-                np.uint32: std_msgs.msg.UInt32(),
-                np.uint64: std_msgs.msg.UInt64(),
-                np.uint8: std_msgs.msg.UInt8(),
-            }[dtype]
-        else:
-            msg_type = (
-                dtype  # allow users to use their own custom messages in numpy arrays
-            )
-        return msg_type
-
-    publishers: Dict[str, rospy.Publisher] = {}
-    rospy.init_node(node_name, anonymous=True)
-    try:
-        for v in read_updates(vids, callbacks, fps_limit, size, end_callback, blocking):
-            if v:
-                if rospy.is_shutdown():
-                    break
-                for vid_name, frame in v.items():
-                    if vid_name not in publishers:
-                        dty = frame.dtype if dtype is None else dtype
-                        publishers[vid_name] = rospy.Publisher(
-                            publisher_name + vid_name,
-                            numpy_msg(get_msg_type(dty)),
-                            queue_size=10,
-                        )
-                    publishers[vid_name].publish(frame)
-            if rate_hz:
-                await asyncio.sleep(1.0 / rate_hz)
-            else:
-                await asyncio.sleep(0)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        vid_names = [uid_for_source(name) for name in vids]
-        for v in vid_names:
-            subscriber_dictionary.stop_cam(v)
-    if rospy.core.is_shutdown():
-        raise rospy.exceptions.ROSInterruptException("rospy shutdown")
