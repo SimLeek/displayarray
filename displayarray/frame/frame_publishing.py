@@ -38,7 +38,7 @@ FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 def pub_cam_loop_pyv4l2(
     cam_id: Union[int, str, np.ndarray],
     request_size: Tuple[int, int] = (-1, -1),
-    high_speed: bool = True,
+    mjpg: bool = True,
     fps_limit: float = float("inf"),
 ):
     """
@@ -47,7 +47,7 @@ def pub_cam_loop_pyv4l2(
     You can send a quit command 'quit' to CVCams.<cam_id>.Cmd
     Status information, such as failure to open, will be posted to CVCams.<cam_id>.Status
 
-    :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
+    :param mjpg: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
     :param fps_limit: Limits the frames per second.
     :param cam_id: An integer representing which webcam to use, or a string representing a video file.
     :param request_size: A tuple with width, then height, to request the video size.
@@ -76,7 +76,7 @@ def pub_cam_loop_pyv4l2(
     sub.return_on_no_data = ""
     msg = ""
 
-    if high_speed and cam.pixel_format != "MJPEG":
+    if mjpg and cam.pixel_format != "MJPEG":
         warnings.warn("Camera does not support high speed.")
 
     now = time.time()
@@ -109,7 +109,7 @@ def pub_cam_loop_pyv4l2(
 def pub_cam_loop_opencv(
     cam_id: Union[int, str, np.ndarray],
     request_size: Tuple[int, int] = (-1, -1),
-    high_speed: bool = True,
+    mjpg: bool = True,
     fps_limit: float = float("inf"),
     extra: Optional[List[Tuple[int, int]]] = None,
 ) -> bool:
@@ -119,7 +119,7 @@ def pub_cam_loop_opencv(
     You can send a quit command 'quit' to CVCams.<cam_id>.Cmd
     Status information, such as failure to open, will be posted to CVCams.<cam_id>.Status
 
-    :param high_speed: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
+    :param mjpg: Selects mjpeg transferring, which most cameras seem to support, so speed isn't limited
     :param fps_limit: Limits the frames per second.
     :param cam_id: An integer representing which webcam to use, or a string representing a video file.
     :param request_size: A tuple with width, then height, to request the video size.
@@ -132,7 +132,7 @@ def pub_cam_loop_opencv(
             cam = ZmqCam(cam_id)
         else:
             cam: Union[NpCam,ZmqCam, cv2.VideoCapture] = cv2.VideoCapture(cam_id)
-    elif isinstance(cam_id, np.ndarray):
+    elif isinstance(cam_id, (np.ndarray)):
         cam = NpCam(cam_id)
     else:
         raise TypeError(
@@ -147,7 +147,7 @@ def pub_cam_loop_opencv(
     sub.return_on_no_data = ""
     msg = ""
 
-    if high_speed:
+    if mjpg:
         try:
             cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
         except AttributeError:
@@ -164,7 +164,7 @@ def pub_cam_loop_opencv(
         time.sleep(1.0 / (fps_limit - (time.time() - now)))
         now = time.time()
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
-        if ret is False or not isinstance(frame, np.ndarray):
+        if ret is False or not isinstance(frame, (np.ndarray, list)):
             cam.release()
             subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
             return False
@@ -187,7 +187,7 @@ uid_dict: Dict[str, threading.Thread] = {}
 def pub_cam_thread(
     cam_id: Union[int, str],
     request_ize: Tuple[int, int] = (-1, -1),
-    high_speed: bool = True,
+    mjpg: bool = True,
     fps_limit: float = float("inf"),
     force_backend="",
 ) -> threading.Thread:
@@ -215,7 +215,7 @@ def pub_cam_thread(
             pub_cam_loop = pub_cam_loop_opencv
 
         t = threading.Thread(
-            target=pub_cam_loop, args=(cam_id, request_ize, high_speed, fps_limit)
+            target=pub_cam_loop, args=(cam_id, request_ize, mjpg, fps_limit)
         )
         uid_dict[name] = t
         t.start()

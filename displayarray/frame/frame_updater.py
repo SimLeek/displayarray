@@ -25,7 +25,7 @@ class FrameUpdater(threading.Thread):
         video_source: Union[int, str, np.ndarray] = 0,
         callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
         request_size: Tuple[int, int] = (-1, -1),
-        high_speed: bool = True,
+        mjpg: bool = True,
         fps_limit: float = float("inf"),
         force_backend="",
     ):
@@ -40,7 +40,7 @@ class FrameUpdater(threading.Thread):
         else:
             self.callbacks = callbacks
         self.request_size = request_size
-        self.high_speed = high_speed
+        self.mjpg = mjpg
         self.fps_limit = fps_limit
         self.exception_raised = None
         self.force_backend = force_backend
@@ -88,7 +88,7 @@ class FrameUpdater(threading.Thread):
         t = pub_cam_thread(
             self.video_source,
             self.request_size,
-            self.high_speed,
+            self.mjpg,
             self.fps_limit,
             self.force_backend,
         )

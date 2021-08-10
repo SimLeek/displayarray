@@ -234,8 +234,11 @@ class SubscriberWindows(object):
         if not self.silent:
             self.display_frames(self.frames)
 
-    def update(self, arr: np.ndarray = None, id: str = None):
+    def update(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str],str] = None):
         """Update window frames once. Optionally add a new input and input id."""
+        if isinstance(arr, list):
+            return self._update_multiple(arr, id)
+
         if arr is not None and id is not None:
             global_cv_display_callback(arr, id)
             if id not in self.input_cams:
@@ -250,7 +253,28 @@ class SubscriberWindows(object):
             for s, t in zip(self.sock_list, self.top_list):
                 f = list(self.frames.values())
                 if f:
-                    s.send_multipart([t, encode_buffer(f[0])])
+                    s.send_multipart([t] + [encode_buffer(fr) for fr in f])
+        return msg_cmd, key
+
+    def _update_multiple(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str],str] = None):
+        if arr is not None and id is not None:
+            for arr_i, id_i in zip(arr, id):
+                global_cv_display_callback(arr_i, id_i)
+                if id_i not in self.input_cams:
+                    self.add_source(id_i)
+                    if not self.silent:
+                        self.add_window(id_i)
+
+        sub_cmd = window_commands.win_cmd_sub()
+        self.update_frames()
+        msg_cmd = sub_cmd.get()
+        key = self.handle_keys(cv2.waitKey(1))
+        if self.sock_list:
+            for s, t in zip(self.sock_list, self.top_list):
+                f = list(self.frames.values())
+                if f:
+                    s.send_multipart([t] + [encode_buffer(fr) for fr in f])
+
         return msg_cmd, key
 
     def wait_for_init(self):
@@ -358,6 +382,7 @@ def _get_video_threads(
     fps=float("inf"),
     size=(-1, -1),
     force_backend="",
+    mjpg=True
 ):
     vid_threads: List[Thread] = []
     if isinstance(callbacks, Dict):
@@ -373,6 +398,7 @@ def _get_video_threads(
                     fps_limit=fps,
                     request_size=size,
                     force_backend=force_backend,
+                    mjpg=mjpg
                 )
             )
     elif callable(callbacks):
@@ -384,6 +410,7 @@ def _get_video_threads(
                     fps_limit=fps,
                     request_size=size,
                     force_backend=force_backend,
+                    mjpg=mjpg
                 )
             )
     else:
@@ -391,7 +418,7 @@ def _get_video_threads(
             if v is not None:
                 vid_threads.append(
                     FrameUpdater(
-                        v, fps_limit=fps, request_size=size, force_backend=force_backend
+                        v, fps_limit=fps, request_size=size, force_backend=force_backend, mjpg=mjpg
                     )
                 )
     return vid_threads
@@ -412,6 +439,7 @@ def display(
     size=(-1, -1),
     silent=False,
     force_backend="",
+    mjpg=True
 ):
     """
     Display all the arrays, cameras, and videos passed in.
@@ -426,6 +454,7 @@ def display(
         fps=fps_limit,
         size=size,
         force_backend=force_backend,
+        mjpg=mjpg
     )
     for v in vid_threads:
         v.start()
@@ -457,7 +486,7 @@ def read_updates(*args, **kwargs):
 
 def publish_updates(*args, address="tcp://127.0.0.1:7880", topic=b"", **kwargs):
     """Publish all the updates to the given address and topic"""
-    if kwargs['blocking']:
+    if 'blocking' in kwargs and kwargs['blocking']:
         block = True
         kwargs['blocking'] = False
     else:
@@ -470,3 +499,4 @@ def publish_updates(*args, address="tcp://127.0.0.1:7880", topic=b"", **kwargs):
         r.loop()
         for vt in r.close_threads:
             vt.join()
+    return r

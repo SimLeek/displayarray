@@ -34,7 +34,7 @@ class ZmqCam(object):
     def read(self):
         """Read back the numpy array in standard "did it work", "the array", OpenCV format."""
         r = self.__sub.recv_multipart()
-        arrs = decode_buffer(r[1])[0]
+        arrs = [decode_buffer(ri) for ri in r[1:]]
         return True, arrs
 
     def isOpened(self):  # NOSONAR
