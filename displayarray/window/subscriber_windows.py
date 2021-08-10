@@ -31,7 +31,7 @@ except:
 
 try:
     import zmq
-    from tensorcom.tenbin import encode_buffer
+    from tensorcom.tenbin import encode_buffer  # type: ignore
 except:
     warnings.warn("Could not import ZMQ and tensorcom. Cannot send messages between programs.")
 
@@ -59,8 +59,8 @@ class SubscriberWindows(object):
         self.exited = False
         self.silent = silent
         self.ctx = None
-        self.sock_list = []
-        self.top_list = []
+        self.sock_list: List[zmq.Socket] = []
+        self.top_list: List[bytes] = []
 
         if callbacks is None:
             callbacks = []
@@ -234,12 +234,13 @@ class SubscriberWindows(object):
         if not self.silent:
             self.display_frames(self.frames)
 
-    def update(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str],str] = None):
+    def update(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str],str, List[int], int, None] = None):
         """Update window frames once. Optionally add a new input and input id."""
         if isinstance(arr, list):
+            assert isinstance(id, list)
             return self._update_multiple(arr, id)
-
-        if arr is not None and id is not None:
+        elif arr is not None and id is not None:
+            assert not isinstance(id, list)
             global_cv_display_callback(arr, id)
             if id not in self.input_cams:
                 self.add_source(id)
@@ -256,10 +257,10 @@ class SubscriberWindows(object):
                     s.send_multipart([t] + [encode_buffer(fr) for fr in f])
         return msg_cmd, key
 
-    def _update_multiple(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str],str] = None):
+    def _update_multiple(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str], List[int]] = None):
         if arr is not None and id is not None:
             for arr_i, id_i in zip(arr, id):
-                global_cv_display_callback(arr_i, id_i)
+                global_cv_display_callback(arr_i, id_i)  # type: ignore
                 if id_i not in self.input_cams:
                     self.add_source(id_i)
                     if not self.silent:
@@ -316,6 +317,7 @@ class SubscriberWindows(object):
         self.__stop_all_cams()
 
     def publish_to(self, address, topic=b""):
+        """Publish the current video to the specified address and topic over a zmq publisher."""
         if self.ctx==None:
             self.ctx = zmq.Context()
         self.sock_list.append(self.ctx.socket(zmq.PUB))
@@ -485,7 +487,7 @@ def read_updates(*args, **kwargs):
 
 
 def publish_updates(*args, address="tcp://127.0.0.1:7880", topic=b"", **kwargs):
-    """Publish all the updates to the given address and topic"""
+    """Publish all the updates to the given address and topic."""
     if 'blocking' in kwargs and kwargs['blocking']:
         block = True
         kwargs['blocking'] = False

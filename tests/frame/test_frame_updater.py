@@ -13,7 +13,7 @@ def test_init_defaults():
     assert ud.cam_id == "0"
     assert ud.callbacks == []
     assert ud.request_size == (-1, -1)
-    assert ud.high_speed == True
+    assert ud.mjpg == True
     assert ud.fps_limit == float("inf")
 
 
@@ -25,7 +25,7 @@ def test_init():
     assert ud.cam_id == "test"
     assert ud.callbacks == [cb]
     assert ud.request_size == (2, 2)
-    assert ud.high_speed == False
+    assert ud.mjpg == False
     assert ud.fps_limit == 30
 
 

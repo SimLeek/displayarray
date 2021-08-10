@@ -127,11 +127,12 @@ def pub_cam_loop_opencv(
     """
     name = uid_for_source(cam_id)
 
+    cam: Union[NpCam, ZmqCam, cv2.VideoCapture]
     if isinstance(cam_id, (int, str)):
         if isinstance(cam_id, str) and cam_id.startswith('tcp'):
             cam = ZmqCam(cam_id)
         else:
-            cam: Union[NpCam,ZmqCam, cv2.VideoCapture] = cv2.VideoCapture(cam_id)
+            cam = cv2.VideoCapture(cam_id)
     elif isinstance(cam_id, (np.ndarray)):
         cam = NpCam(cam_id)
     else:

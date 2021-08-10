@@ -1,6 +1,9 @@
+"""Allow OpenCV to handle zmq subscriber addresses as input."""
+
 import cv2
 import zmq
-from tensorcom.tenbin import decode_buffer
+from tensorcom.tenbin import decode_buffer  # type: ignore
+
 
 class ZmqCam(object):
     """Add OpenCV camera controls to a numpy array."""
@@ -12,7 +15,7 @@ class ZmqCam(object):
         self.__ctx = zmq.Context()
         self.__addr = s[0]
         self.__sub = self.__ctx.socket(zmq.SUB)
-        if len(s)>1:
+        if len(s) > 1:
             self.__topic = bytes(s[1], 'ascii')
             self.__sub.setsockopt(zmq.SUBSCRIBE, self.__topic)
         else:

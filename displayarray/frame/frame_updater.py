@@ -266,12 +266,12 @@ async def read_updates_ros(
         {
             np.float32: std_msgs.msg.Float32(),
             np.float64: std_msgs.msg.Float64(),
-            np.bool: std_msgs.msg.Bool(),
+            np.bool: std_msgs.msg.Bool(),  # type: ignore
             np.char: std_msgs.msg.Char(),
             np.int16: std_msgs.msg.Int16(),
             np.int32: std_msgs.msg.Int32(),
             np.int64: std_msgs.msg.Int64(),
-            np.str: std_msgs.msg.String(),
+            np.str: std_msgs.msg.String(),  # type: ignore
             np.uint16: std_msgs.msg.UInt16(),
             np.uint32: std_msgs.msg.UInt32(),
             np.uint64: std_msgs.msg.UInt64(),
