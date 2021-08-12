@@ -21,7 +21,7 @@ i = 0
 while d:
     if len(d.frames) > 0:
         i += 1
-        frame = d.frames[0]
+        frame = next(iter(d.frames.values()))
         center_sin = [(m.sin(m.pi * (i / 70.0))), (m.cos(m.pi * (i / 120.0)))]
         pre_crop_callback.center = [
             center_sin[0] * 720 / 2 + 720 / 2,

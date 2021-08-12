@@ -25,12 +25,18 @@ class SelectChannels(object):
 
     def __call__(self, arr):
         """Run the channel selector."""
-        self.num_input_channels = arr.shape[-1]
-        out_arr = [
-            arr[..., min(max(0, x), arr.shape[-1] - 1)] for x in self.selected_channels
-        ]
-        out_arr = np.stack(out_arr, axis=-1)
-        return out_arr
+        if isinstance(arr, list):
+            ars = []
+            for a in arr:
+                ars.append(self.__call__(a))
+            return ars
+        else:
+            self.num_input_channels = arr.shape[-1]
+            out_arr = [
+                arr[..., min(max(0, x), arr.shape[-1] - 1)] for x in self.selected_channels
+            ]
+            out_arr = np.stack(out_arr, axis=-1)
+            return out_arr
 
     def enable_mouse_control(self):
         """

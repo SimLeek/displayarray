@@ -38,7 +38,7 @@ def test_pub_cam_int():
 
         cam_0 = subd.CV_CAMS_DICT["0"] = subd.Cam("0")
         with mock.patch.object(cam_0.frame_pub, "publish") as cam_pub:
-            pub_cam_loop_opencv(0, high_speed=False)
+            pub_cam_loop_opencv(0, mjpg=False)
 
             cam_pub.assert_has_calls([mock.call(img)] * 4)
 
@@ -79,7 +79,7 @@ def test_pub_cam_fail():
         with mock.patch.object(
             subd.CV_CAMS_DICT["0"].status_pub, "publish"
         ) as mock_fail_pub:
-            pub_cam_loop_opencv(0, high_speed=False)
+            pub_cam_loop_opencv(0, mjpg=False)
 
             mock_fail_pub.assert_called_once_with("failed")
 
@@ -100,7 +100,7 @@ def test_pub_cam_high_speed():
 
         mock_is_open.return_value = False
 
-        pub_cam_loop_opencv(0, request_size=(640, 480), high_speed=True)
+        pub_cam_loop_opencv(0, request_size=(640, 480), mjpg=True)
 
         mock_cam_set.assert_has_calls(
             [

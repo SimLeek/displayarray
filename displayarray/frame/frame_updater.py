@@ -25,7 +25,7 @@ class FrameUpdater(threading.Thread):
         video_source: Union[int, str, np.ndarray] = 0,
         callbacks: Optional[Union[List[FrameCallable], FrameCallable]] = None,
         request_size: Tuple[int, int] = (-1, -1),
-        high_speed: bool = True,
+        mjpg: bool = True,
         fps_limit: float = float("inf"),
         force_backend="",
     ):
@@ -40,7 +40,7 @@ class FrameUpdater(threading.Thread):
         else:
             self.callbacks = callbacks
         self.request_size = request_size
-        self.high_speed = high_speed
+        self.mjpg = mjpg
         self.fps_limit = fps_limit
         self.exception_raised = None
         self.force_backend = force_backend
@@ -88,7 +88,7 @@ class FrameUpdater(threading.Thread):
         t = pub_cam_thread(
             self.video_source,
             self.request_size,
-            self.high_speed,
+            self.mjpg,
             self.fps_limit,
             self.force_backend,
         )
@@ -266,12 +266,12 @@ async def read_updates_ros(
         {
             np.float32: std_msgs.msg.Float32(),
             np.float64: std_msgs.msg.Float64(),
-            np.bool: std_msgs.msg.Bool(),
+            np.bool: std_msgs.msg.Bool(),  # type: ignore
             np.char: std_msgs.msg.Char(),
             np.int16: std_msgs.msg.Int16(),
             np.int32: std_msgs.msg.Int32(),
             np.int64: std_msgs.msg.Int64(),
-            np.str: std_msgs.msg.String(),
+            np.str: std_msgs.msg.String(),  # type: ignore
             np.uint16: std_msgs.msg.UInt16(),
             np.uint32: std_msgs.msg.UInt32(),
             np.uint64: std_msgs.msg.UInt64(),

@@ -42,9 +42,10 @@ setup(
     install_requires=[
         "docopt==0.6.2",
         "localpubsub==0.0.4",
-        "numpy>=1.17.0",
+        "numpy>=1.14.5",
         "opencv-python==4.*,>=4.0.0",
-        "pyzmq==18.1.0",
+        "pyzmq>=22.0.3",
+        "tensorcom"
     ],
     extras_require={
         # pypi doesn't allow direct dependencies for security reasons,
