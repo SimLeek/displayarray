@@ -112,6 +112,7 @@ class SubscriberWindows(object):
     def __stop_all_cams(self):
         for c in self.source_names:
             subscriber_dictionary.stop_cam(c)
+            subscriber_dictionary.del_cam(c)
 
     def handle_keys(self, key_input: int):
         """Capture key input for the escape function and passing to key control subscriber threads."""
@@ -214,7 +215,6 @@ class SubscriberWindows(object):
     def update_frames(self):
         """Update the windows with the newest data for all frames."""
         self.frames = {}
-
         for i in range(len(self.input_vid_global_names)):
             if self.input_vid_global_names[i] in self.FRAME_DICT and not isinstance(
                 self.FRAME_DICT[self.input_vid_global_names[i]], NoData
