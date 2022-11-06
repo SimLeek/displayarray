@@ -147,7 +147,6 @@ def pub_cam_loop_opencv(
     sub = subscriber_dictionary.cam_cmd_sub(name)
     sub.return_on_no_data = ""
     msg = ""
-
     if mjpg:
         try:
             cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
@@ -174,7 +173,11 @@ def pub_cam_loop_opencv(
             if frame_counter >= cam.get(cv2.CAP_PROP_FRAME_COUNT):
                 frame_counter = 0
                 cam = cv2.VideoCapture(cam_id)
-        subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)
+        try:
+            subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)
+        except KeyError:  # we got deleted. Time to exit.
+            cam.release()
+            return False
         msg = sub.get()
     sub.release()
 
@@ -195,9 +198,10 @@ def pub_cam_thread(
     """Run pub_cam_loop in a new thread. Starts on creation."""
 
     name = uid_for_source(cam_id)
+    t = None
     if name in uid_dict.keys():
         t = uid_dict[name]
-    else:
+    if t is None or not t.is_alive():  # Enables reopening cameras
         if "cv" in force_backend.lower():
             pub_cam_loop = pub_cam_loop_opencv
         elif (

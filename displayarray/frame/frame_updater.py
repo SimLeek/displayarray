@@ -216,10 +216,10 @@ async def read_updates_zero_mq(
         try:
             md = s.recv_json(flags=flags)
             msg = s.recv(flags=flags, copy=copy, track=track)
-            buf = memoryview(msg)
-            arr = np.frombuffer(buf, dtype=md["dtype"])
-            arr.reshape(md["shape"])
-            name = md["name"]
+            buf = memoryview(msg)  # type: ignore
+            arr = np.frombuffer(buf, dtype=md["dtype"])  # type: ignore
+            arr.reshape(md["shape"])  # type: ignore
+            name = md["name"]  # type: ignore
             cb_val = end_callback(md)
             yield name, arr
         except zmq.ZMQError as e:
