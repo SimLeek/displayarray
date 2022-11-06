@@ -50,11 +50,14 @@ def stop_cam(cam_id: Union[int, str]):
     if str(cam_id) in CV_CAM_HANDLERS_DICT:
         CV_CAM_HANDLERS_DICT[str(cam_id)].cmd_pub.publish("quit", blocking=True)
 
+
 def del_cam(cam_id: Union[int, str]):
+    """Delete camera "cam_id"."""
     if str(cam_id) in CV_CAMS_DICT:
         del CV_CAMS_DICT[str(cam_id)]
     if str(cam_id) in CV_CAM_HANDLERS_DICT:
         del CV_CAM_HANDLERS_DICT[str(cam_id)]
+
 
 def cam_cmd_sub(cam_id, blocking=True):
     """Get a command subscriber for registered camera "cam_id"."""
