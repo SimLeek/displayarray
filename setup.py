@@ -23,7 +23,7 @@ if os.path.exists(readme_path):
 setup(
     long_description=readme,
     name="displayarray",
-    version="1.3.0",
+    version="1.3.1",
     description="Tool for displaying numpy arrays.",
     python_requires="==3.*,>=3.6.0",
     project_urls={"repository": "https://github.com/simleek/displayarray"},

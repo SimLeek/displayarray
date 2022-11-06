@@ -157,7 +157,6 @@ def pub_cam_loop_opencv(
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
 
     if not cam.isOpened():
-        print("camera failed to open")
         subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
         return False
     now = time.time()
@@ -168,7 +167,6 @@ def pub_cam_loop_opencv(
         if ret is False or not isinstance(frame, (np.ndarray, list)):
             cam.release()
             subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
-            print("cam returned false")
             return False
         if cam.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
             frame_counter += 1
