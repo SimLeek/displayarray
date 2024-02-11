@@ -36,18 +36,25 @@ class MglWindowConfig(mgw.WindowConfig):
         if self.uibo is not None:
             self.uibo.iMouse[0] = float(x)
             self.uibo.iMouse[1] = float(y)
-
-    def mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
         if self.hit_buff is not None:
             frame = self.hit_buff.hit_level
             if frame!=-1:
                 self.last_frame = frame
-            rect = self.rbuf.tex_levels[self.last_frame]['rect']
-            rect[0] += dx
-            rect[1] += dy
-            rect[2] += dx
-            rect[3] += dy
 
+    def mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
+        if self.hit_buff is not None:
+            rect = self.rbuf.tex_levels[self.last_frame]['rect']
+            swap = self.rbuf.tex_levels[self.last_frame]['flags']&8
+            if not swap:
+                rect[0] += dx
+                rect[1] += dy
+                rect[2] += dx
+                rect[3] += dy
+            else:
+                rect[0] += dy
+                rect[1] += dx
+                rect[2] += dy
+                rect[3] += dx
 
 
 
@@ -80,11 +87,11 @@ class InputTextureInfosUBO(object):
 
         # Initialize texture levels with default values
         for s in start_textures:
-            tex_level = {'startIdx': 0, 'width': s.shape[0], 'height': s.shape[1], 'rect': [1.0, 0.0, 0.0, 1.0]}
+            tex_level = {'startIdx': 0, 'width': s.shape[0], 'height': s.shape[1], 'flags':0, 'rect': [1.0, 0.0, 0.0, 1.0]}
             self.tex_levels.append(tex_level)
             self.input_image = np.concatenate((self.input_image, s.flatten()), axis=0, dtype=self.input_image.dtype)
 
-    def append_input_stream(self, img:np.ndarray):
+    def append_input_stream(self, img:np.ndarray, flags:int=0):
         i = len(self.tex_levels)
         start_index = self.tex_levels[-1]['startIdx']+\
                       self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.channels
@@ -96,6 +103,7 @@ class InputTextureInfosUBO(object):
             'startIdx': start_index,
             'width': width,
             'height': height,
+            'flags': flags,
             'rect': rect
         })
         self.input_image = np.concatenate((self.input_image, img.flatten()), axis=0, dtype=self.input_image.dtype)
@@ -103,7 +111,7 @@ class InputTextureInfosUBO(object):
 
         return i
 
-    def set_input_stream(self, i, img:np.ndarray):
+    def set_input_stream(self, i, img:np.ndarray, flags:int=0):
         start_index = self.tex_levels[i]['startIdx']
         end_index = start_index + img.shape[0] * img.shape[1] * self.channels
         assert img.shape[2] == self.channels
@@ -117,6 +125,7 @@ class InputTextureInfosUBO(object):
 
         self.tex_levels[i]['width'] = img.shape[0]
         self.tex_levels[i]['height'] = img.shape[1]
+        self.tex_levels[i]['flags'] = flags
 
         self.input_image[start_index:end_index] = img.flatten()
 
@@ -124,7 +133,7 @@ class InputTextureInfosUBO(object):
         tex_data_bytes = bytearray()
         tex_data_bytes.extend(struct.pack("<2ixxxxxxxx", self.channels, len(self.tex_levels)))
         for level in self.tex_levels:
-            tex_data_bytes.extend(struct.pack("<3ixxxx", level['startIdx'], level['width'], level['height']))
+            tex_data_bytes.extend(struct.pack("<4i", level['startIdx'], level['width'], level['height'], level['flags'])) # todo: add 4th int holding flags (rgb order, w/h order)
             tex_data_bytes.extend(struct.pack("<4f", *level['rect']))
         return bytes(tex_data_bytes)
 
@@ -237,7 +246,7 @@ class MglApp(object):
 
         self.shader = self.ctx.program(vertex_shader=self.vertex_shader, fragment_shader=self.fragment_shader)
 
-        self.input_texture_ubo_buffer = self.ctx.buffer(reserve=4*1920*1080*2*3, dynamic=True)
+        self.input_texture_ubo_buffer = self.ctx.buffer(reserve=4*1920*1080*4*3, dynamic=True)
         self.input_texture_infos_ubo_buffer = self.ctx.buffer(reserve=4*30*7+4*2, dynamic=True)
         self.user_input_ubo_buffer = self.ctx.buffer(self.user_input_ubo.to_bytes(), dynamic=False)
         self.user_output_ubo_buffer = self.ctx.buffer(self.user_output_ubo.to_bytes(), dynamic=False)
@@ -260,14 +269,6 @@ class MglApp(object):
             int_list.append(int.from_bytes(out_data[i*4:(i+1)*4], byteorder='little', signed=True))
         self.user_output_ubo.hit_level = int.from_bytes(out_data[0:4], byteorder='little', signed=True)
         self.user_output_ubo.hit_pos = np.frombuffer(out_data[4:], dtype=np.float32)
-        #if self.user_output_ubo.hit_level!=-1:
-        #    print(f"hit: {self.user_output_ubo.hit_level}")
-        #    print(f"x,y: {self.user_output_ubo.hit_pos}")
-
-
-        #self.shader['InputBuffer'].write(self.input_texture_infos_ubo.get_input_image_buffer())
-        #self.shader['TexData'].write(self.input_texture_infos_ubo.get_tex_data_buffer())
-        #self.shader['UserInput'].write(self.user_input_ubo.to_bytes())
 
     def update(self, time, frame_time):
         # self.ctx.clear(1.0, 1.0, 1.0)
@@ -307,7 +308,7 @@ class MglWindow(object):
             if values.resizable is not None
             else config_cls.resizable,
             gl_version=config_cls.gl_version,
-            aspect_ratio=config_cls.aspect_ratio,
+            aspect_ratio=None,  # we're resizing
             vsync=values.vsync if values.vsync is not None else config_cls.vsync,
             samples=values.samples if values.samples is not None else config_cls.samples,
             cursor=show_cursor if show_cursor is not None else True,
@@ -340,17 +341,14 @@ class MglWindow(object):
         self.window_names = {}
 
     def imshow(self, window_name, frame):
-        frame = np.swapaxes(frame, 0, 1)
-        frame[:,:, [2, 0]] = frame[:,:, [0, 2]]
-
         if frame.dtype == np.uint8:
             frame = frame.astype(np.float32) / 255
 
         if window_name in self.window_names.keys():
             i = self.window_names[window_name]
-            self.app.input_texture_infos_ubo.set_input_stream(i, frame)
+            self.app.input_texture_infos_ubo.set_input_stream(i, frame, flags=9)
         else:
-            self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame)
+            self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, flags=9)
 
     def update(self):
         current_time, delta = self.timer.next_frame()

@@ -4,8 +4,14 @@ struct TexLevel {
     int startIdx;
     int width;
     int height;
+    int flags;
     vec4 rect; // 4 float representing position on triangle
 };
+
+#define TEX_FLAG_HW 8
+#define TEX_FLAG_WH 0
+#define TEX_FLAG_RGB 0
+#define TEX_FLAG_BGR 1
 
 layout(std430, binding = 0) buffer InputBuffer {
     float inputImage[];
@@ -39,12 +45,18 @@ void main() {
     int our_level = -1;
     float y_current = -1;
     float x_current = -1;
+    vec2 coord;
 
     for(int i=0;i<levels;i++){
-        if(gl_FragCoord.x>=texLevels[i].rect.x &&
-            gl_FragCoord.y>=texLevels[i].rect.y &&
-            gl_FragCoord.x<texLevels[i].rect.z &&
-            gl_FragCoord.y<texLevels[i].rect.w
+        if(bool(texLevels[i].flags&TEX_FLAG_HW)){
+            coord = gl_FragCoord.yx;
+        }else{
+            coord = gl_FragCoord.xy;
+        }
+        if(coord.x>=texLevels[i].rect.x &&
+            coord.y>=texLevels[i].rect.y &&
+            coord.x<texLevels[i].rect.z &&
+            coord.y<texLevels[i].rect.w
         ){
             our_level = i;
             //don't break. All shader instances should get same execution, and this puts later textures on top.
@@ -52,12 +64,17 @@ void main() {
     }
 
     if(our_level!=-1) {
+        if(bool(texLevels[our_level].flags&TEX_FLAG_HW)){
+            coord = gl_FragCoord.yx;
+        }else{
+            coord = gl_FragCoord.xy;
+        }
 
         int levelWidth = texLevels[our_level].width;
         int levelHeight = texLevels[our_level].height;
 
-        y_current = int(levelHeight * (gl_FragCoord.y - texLevels[our_level].rect.y) / (texLevels[our_level].rect.w - texLevels[our_level].rect.y));
-        x_current = int(levelWidth * (gl_FragCoord.x - texLevels[our_level].rect.x) / (texLevels[our_level].rect.z - texLevels[our_level].rect.x));
+        y_current = int(levelHeight * (coord.y - texLevels[our_level].rect.y) / (texLevels[our_level].rect.w - texLevels[our_level].rect.y));
+        x_current = int(levelWidth * (coord.x - texLevels[our_level].rect.x) / (texLevels[our_level].rect.z - texLevels[our_level].rect.x));
 
         int topLeftIdx = texLevels[our_level].startIdx + int(floor(x_current) * texLevels[our_level].height * channels + floor(y_current) * channels);
         int topRightIdx = topLeftIdx + texLevels[our_level].height * channels;
@@ -66,6 +83,7 @@ void main() {
 
         //leave this for visual debugging
         out_color = vec4(float(y_current)/float(levelHeight), float(x_current)/float(levelWidth), 0.0, 1.0);
+
         out_color.x = bilinearInterpolation(
             fract(x_current),
             fract(y_current),
@@ -93,6 +111,11 @@ void main() {
                 inputImage[topLeftIdx+2],
                 inputImage[topRightIdx+2]
             );
+        }
+        if(bool(texLevels[our_level].flags&TEX_FLAG_BGR)){
+            float temp_color = out_color.x;
+            out_color.x = out_color.z;
+            out_color.z = temp_color;
         }
         // currently only supporting 3 channels at most.
     }else{
