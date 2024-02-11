@@ -18,10 +18,12 @@ try:
 
         using_pyv4l2cam = True
 except ImportError:
-    warnings.warn("Could not import PyV4L2Cam on linux. Camera capture will be slow.")
-    warnings.warn(
-        "To install, run: pip install git+https://github.com/simleek/PyV4L2Cam.git"
-    )
+    pass
+    # while this is still good for raspberry pi, OpenCV tends to be faster for normal computers.
+    #warnings.warn("Could not import PyV4L2Cam on linux. Camera capture will be slow.")
+    #warnings.warn(
+    #    "To install, run: pip install git+https://github.com/simleek/PyV4L2Cam.git"
+    #)
 
 import numpy as np
 

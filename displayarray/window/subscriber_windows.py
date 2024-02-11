@@ -35,6 +35,7 @@ try:
 except:
     warnings.warn("Could not import ZMQ and tensorcom. Cannot send messages between programs.")
 
+from . import mglwindow
 
 class SubscriberWindows(object):
     """Windows that subscribe to updates to cameras, videos, and arrays."""
@@ -61,6 +62,7 @@ class SubscriberWindows(object):
         self.ctx = None
         self.sock_list: List[zmq.Socket] = []
         self.top_list: List[bytes] = []
+        self.displayer = mglwindow.MglWindow()
 
         if callbacks is None:
             callbacks = []
@@ -75,10 +77,10 @@ class SubscriberWindows(object):
 
     def __bool__(self):
         self.update()
-        return not self.exited
+        return not self.exited and not self.displayer.window.is_closing
 
     def __iter__(self):
-        while not self.exited:
+        while not self.exited and not self.displayer.window.is_closing:
             self.update()
             yield self.frames
 
@@ -93,15 +95,15 @@ class SubscriberWindows(object):
         uid = uid_for_source(name)
         self.source_names.append(uid)
         self.input_vid_global_names.append(uid)
-        self.input_cams.append(name)
+        self.input_cams.append(uid)
         return self
 
     def add_window(self, name):
         """Add another window for this class to display sources with. The name will be the title."""
         self.window_names.append(name)
-        cv2.namedWindow(name + " (press ESC to quit)")
-        m = WeakMethod(self.handle_mouse)
-        cv2.setMouseCallback(name + " (press ESC to quit)", m)
+        #cv2.namedWindow(name + " (press ESC to quit)")
+        #m = WeakMethod(self.handle_mouse)
+        #cv2.setMouseCallback(name + " (press ESC to quit)", m)
         return self
 
     def add_callback(self, callback):
@@ -160,7 +162,7 @@ class SubscriberWindows(object):
                     else:
                         if len(self.window_names) <= win_num:
                             self.add_window(f"{prepend_name}{win_num}")
-                        cv2.imshow(
+                        self.displayer.imshow(
                             self.window_names[win_num] + " (press ESC to quit)", f[i]
                         )
                         win_num += 1
@@ -179,7 +181,7 @@ class SubscriberWindows(object):
                 else:
                     if len(self.window_names) <= win_num:
                         self.add_window(f"{prepend_name} {win_num}")
-                    cv2.imshow(
+                    self.displayer.imshow(
                         self.window_names[win_num] + " (press ESC to quit)", frames[f]
                     )
                     win_num += 1
@@ -233,6 +235,7 @@ class SubscriberWindows(object):
                     self.__check_too_many_channels()
         if not self.silent:
             self.display_frames(self.frames)
+            self.displayer.update()
 
     def update(self, arr: Union[List[np.ndarray], np.ndarray] = None, id: Union[List[str],str, List[int], int, None] = None):
         """Update window frames once. Optionally add a new input and input id."""
@@ -292,6 +295,7 @@ class SubscriberWindows(object):
         self.__stop_all_cams()
         for t in self.close_threads:
             t.join()
+        self.displayer.window.close()
 
     def __enter__(self):
         return self
@@ -310,7 +314,7 @@ class SubscriberWindows(object):
         sub_cmd = window_commands.win_cmd_sub()
         msg_cmd = ""
         key = ""
-        while msg_cmd != "quit" and key != "quit":
+        while msg_cmd != "quit" and key != "quit" and (not self.displayer.window.is_closing):
             msg_cmd, key = self.update()
         sub_cmd.release()
         window_commands.quit(force_all_read=False)
