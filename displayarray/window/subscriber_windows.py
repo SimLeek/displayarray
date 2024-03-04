@@ -62,7 +62,7 @@ class SubscriberWindows(object):
         self.ctx = None
         self.sock_list: List[zmq.Socket] = []
         self.top_list: List[bytes] = []
-        self.displayer = mglwindow.MglWindow()
+        self.displayer = None
 
         if callbacks is None:
             callbacks = []
@@ -70,6 +70,7 @@ class SubscriberWindows(object):
             self.add_source(name)
         self.callbacks = callbacks
         if not self.silent:
+            self.displayer = mglwindow.MglWindow()
             for name in window_names:
                 self.add_window(name)
 
@@ -77,10 +78,10 @@ class SubscriberWindows(object):
 
     def __bool__(self):
         self.update()
-        return not self.exited and not self.displayer.window.is_closing
+        return not self.exited and (self.displayer is None or not self.displayer.window.is_closing)
 
     def __iter__(self):
-        while not self.exited and not self.displayer.window.is_closing:
+        while not self.exited and (self.displayer is None or not self.displayer.window.is_closing):
             self.update()
             yield self.frames
 
@@ -295,7 +296,8 @@ class SubscriberWindows(object):
         self.__stop_all_cams()
         for t in self.close_threads:
             t.join()
-        self.displayer.window.close()
+        if self.displayer is not None:
+            self.displayer.window.close()
 
     def __enter__(self):
         return self
@@ -314,7 +316,7 @@ class SubscriberWindows(object):
         sub_cmd = window_commands.win_cmd_sub()
         msg_cmd = ""
         key = ""
-        while msg_cmd != "quit" and key != "quit" and (not self.displayer.window.is_closing):
+        while msg_cmd != "quit" and key != "quit" and (self.displayer is None or not self.displayer.window.is_closing):
             msg_cmd, key = self.update()
         sub_cmd.release()
         window_commands.quit(force_all_read=False)

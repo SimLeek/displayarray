@@ -24,6 +24,7 @@ layout(std430, binding = 1) buffer TexData {
 };
 
 layout(std430, binding=2) buffer UserInput {
+    int sel_level;
     vec2 iMouse;
 };
 
@@ -47,26 +48,26 @@ void main() {
     float x_current = -1;
     vec2 coord;
 
-    for(int i=0;i<levels;i++){
-        if(bool(texLevels[i].flags&TEX_FLAG_HW)){
+    for (int i = 0;i < levels; i++) {
+        if (bool(texLevels[i].flags & TEX_FLAG_HW)) {
             coord = gl_FragCoord.yx;
-        }else{
+        } else {
             coord = gl_FragCoord.xy;
         }
-        if(coord.x>=texLevels[i].rect.x &&
-            coord.y>=texLevels[i].rect.y &&
-            coord.x<texLevels[i].rect.z &&
-            coord.y<texLevels[i].rect.w
-        ){
+        if (coord.x >= texLevels[i].rect.x &&
+        coord.y >= texLevels[i].rect.y &&
+        coord.x < texLevels[i].rect.z &&
+        coord.y < texLevels[i].rect.w
+        ) {
             our_level = i;
             //don't break. All shader instances should get same execution, and this puts later textures on top.
         }
     }
 
-    if(our_level!=-1) {
-        if(bool(texLevels[our_level].flags&TEX_FLAG_HW)){
+    if (our_level != -1) {
+        if (bool(texLevels[our_level].flags & TEX_FLAG_HW)) {
             coord = gl_FragCoord.yx;
-        }else{
+        } else {
             coord = gl_FragCoord.xy;
         }
 
@@ -82,7 +83,7 @@ void main() {
         int bottomRightIdx = topRightIdx + channels;
 
         //leave this for visual debugging
-        out_color = vec4(float(y_current)/float(levelHeight), float(x_current)/float(levelWidth), 0.0, 1.0);
+        out_color = vec4(float(y_current) / float(levelHeight), float(x_current) / float(levelWidth), 0.0, 1.0);
 
         out_color.x = bilinearInterpolation(
             fract(x_current),
@@ -96,31 +97,47 @@ void main() {
             out_color.y = bilinearInterpolation(
                 fract(x_current),
                 fract(y_current),
-                inputImage[bottomLeftIdx+1],
-                inputImage[bottomRightIdx+1],
-                inputImage[topLeftIdx+1],
-                inputImage[topRightIdx+1]
+                inputImage[bottomLeftIdx + 1],
+                inputImage[bottomRightIdx + 1],
+                inputImage[topLeftIdx + 1],
+                inputImage[topRightIdx + 1]
             );
         }
-        if(channels>2){
+        if (channels > 2) {
             out_color.z = bilinearInterpolation(
                 fract(x_current),
                 fract(y_current),
-                inputImage[bottomLeftIdx+2],
-                inputImage[bottomRightIdx+2],
-                inputImage[topLeftIdx+2],
-                inputImage[topRightIdx+2]
+                inputImage[bottomLeftIdx + 2],
+                inputImage[bottomRightIdx + 2],
+                inputImage[topLeftIdx + 2],
+                inputImage[topRightIdx + 2]
             );
         }
-        if(bool(texLevels[our_level].flags&TEX_FLAG_BGR)){
+        if (bool(texLevels[our_level].flags & TEX_FLAG_BGR)) {
             float temp_color = out_color.x;
             out_color.x = out_color.z;
             out_color.z = temp_color;
         }
         // currently only supporting 3 channels at most.
-    }else{
+    } else {
         // nice white background. ( ∩´ ᐜ `∩)
         out_color = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+
+    if (sel_level != -1) {
+        if (coord.x >= texLevels[sel_level].rect.x - 1 &&
+        coord.y >= texLevels[sel_level].rect.y - 1 &&
+        coord.x <= texLevels[sel_level].rect.z &&
+        coord.y <= texLevels[sel_level].rect.w
+        ) {
+            if (coord.x == texLevels[sel_level].rect.x - 1 ||
+            coord.y == texLevels[sel_level].rect.y - 1 ||
+            coord.x == texLevels[sel_level].rect.z ||
+            coord.y == texLevels[sel_level].rect.w
+            ) {
+                out_color = vec4(0.0, 0.5, 0.0, 1.0); // green selection border, on top of everything
+            }
+        }
     }
 
     if(distance(iMouse, gl_FragCoord.xy)==0){

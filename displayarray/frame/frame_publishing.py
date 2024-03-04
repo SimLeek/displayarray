@@ -142,6 +142,11 @@ def pub_cam_loop_opencv(
             "Only strings or ints representing cameras, or numpy arrays representing pictures supported."
         )
 
+    if fps_limit == float("inf"):
+        fps_limit = cam.get(cv2.CAP_PROP_FPS)
+        if fps_limit is None:
+            fps_limit = float("inf")
+
     subscriber_dictionary.register_cam(name, cam)
 
     frame_counter = 0

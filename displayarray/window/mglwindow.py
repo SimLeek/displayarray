@@ -5,6 +5,7 @@ import cv2
 import struct
 from moderngl_window import geometry
 import os
+import rectpack
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -40,6 +41,18 @@ class MglWindowConfig(mgw.WindowConfig):
             frame = self.hit_buff.hit_level
             if frame!=-1:
                 self.last_frame = frame
+                self.uibo.sel_lvl[0] = frame
+
+    def mouse_press_event(self, x, y, button):
+        # sometimes mouse position event doesn't always trigger, so clicking can now help
+        if self.uibo is not None:
+            self.uibo.iMouse[0] = float(x)
+            self.uibo.iMouse[1] = float(y)
+        if self.hit_buff is not None:
+            frame = self.hit_buff.hit_level
+            if frame != -1:
+                self.last_frame = frame
+                self.uibo.sel_lvl[0] = frame
 
     def mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
         if self.hit_buff is not None:
@@ -56,7 +69,39 @@ class MglWindowConfig(mgw.WindowConfig):
                 rect[2] += dy
                 rect[3] += dx
 
+    def key_event(self, key, action, modifiers):
+        if key == self.wnd.keys.P and action == self.wnd.keys.ACTION_PRESS:
+            rects = []
+            for i in range(len(self.rbuf.tex_levels)):
+                r = self.rbuf.tex_levels[i]['rect']  #ltrb
+                rects.append((r[2]-r[0], r[3]-r[1]))
+            packer = rectpack.newPacker(
+                mode=rectpack.PackingMode.Offline,
+                pack_algo=rectpack.MaxRectsBaf,
+                bin_algo=rectpack.PackingBin.BFF,
+                sort_algo=rectpack.SORT_AREA,
+                rotation=False
+            )
 
+            bins = [(self.wnd.height, self.wnd.width)]
+
+            for i,r in enumerate(rects):
+                packer.add_rect(*r, rid=i)
+
+            # Add the bins where the rectangles will be placed
+            for b in bins:
+                packer.add_bin(*b)
+
+            # Start packing
+            packer.pack()
+
+            all_rects = packer.rect_list()
+            for rect in all_rects:
+                b, x, y, w, h, rid = rect
+                self.rbuf.tex_levels[rid]['rect'][0] = x
+                self.rbuf.tex_levels[rid]['rect'][1] = y
+                self.rbuf.tex_levels[rid]['rect'][2] = x+w
+                self.rbuf.tex_levels[rid]['rect'][3] = y + h
 
 
 def create_no_input_texture(width=100, height=100):
@@ -78,23 +123,30 @@ class InputTextureInfosUBO(object):
     def __init__(self, start_textures=[]):
         self.channels = 3  # Assuming RGB format
         self.tex_levels = []
-        self.input_image: np.ndarray = np.asarray([], dtype=np.float32)
+        #self.input_image: np.ndarray = np.asarray([], dtype=np.float32)
+        #self.input_image:bytearray = bytearray()
+        self.input_image = []
         self.no_input = not bool(start_textures)
 
         # Initialize input image buffer with a default "no input" image
-        if not start_textures:
-            start_textures = [create_no_input_texture()]
+        #if not start_textures:
+        #    start_textures = [create_no_input_texture()]
 
         # Initialize texture levels with default values
-        for s in start_textures:
-            tex_level = {'startIdx': 0, 'width': s.shape[0], 'height': s.shape[1], 'flags':0, 'rect': [1.0, 0.0, 0.0, 1.0]}
-            self.tex_levels.append(tex_level)
-            self.input_image = np.concatenate((self.input_image, s.flatten()), axis=0, dtype=self.input_image.dtype)
+        #for s in start_textures:
+        #    tex_level = {'startIdx': 0, 'width': s.shape[0], 'height': s.shape[1], 'flags':0, 'rect': [1.0, 0.0, 0.0, 1.0]}
+        #    self.tex_levels.append(tex_level)
+            #self.input_image.extend(s.astype(np.float32).tobytes())
+            #self.input_image = np.concatenate((self.input_image, s.flatten()), axis=0, dtype=self.input_image.dtype)
+        #    self.input_image.append((s, 0))
 
     def append_input_stream(self, img:np.ndarray, flags:int=0):
         i = len(self.tex_levels)
-        start_index = self.tex_levels[-1]['startIdx']+\
-                      self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.channels
+        if i==0:
+            start_index = 0
+        else:
+            start_index = self.tex_levels[-1]['startIdx']+\
+                          self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.channels
         width = img.shape[0]
         height = img.shape[1]
         assert img.shape[2] == self.channels
@@ -106,15 +158,19 @@ class InputTextureInfosUBO(object):
             'flags': flags,
             'rect': rect
         })
-        self.input_image = np.concatenate((self.input_image, img.flatten()), axis=0, dtype=self.input_image.dtype)
+        if isinstance(self.input_image, bytes):
+            self.input_image = bytearray(self.input_image)
+        #self.input_image = np.concatenate((self.input_image, img.flatten()), axis=0, dtype=self.input_image.dtype)
         #self.input_image[start_index:] =  img.flatten()
+        #self.input_image.extend(img.tobytes())
+        self.input_image.append((img, start_index))
 
         return i
 
     def set_input_stream(self, i, img:np.ndarray, flags:int=0):
         start_index = self.tex_levels[i]['startIdx']
         end_index = start_index + img.shape[0] * img.shape[1] * self.channels
-        assert img.shape[2] == self.channels
+        # assert img.shape[2] == self.channels
         if i!=len(self.tex_levels) and \
             self.tex_levels[i]['width']*self.tex_levels[i]['height']!=img.shape[0]*img.shape[1]:
             ind = start_index
@@ -127,7 +183,22 @@ class InputTextureInfosUBO(object):
         self.tex_levels[i]['height'] = img.shape[1]
         self.tex_levels[i]['flags'] = flags
 
-        self.input_image[start_index:end_index] = img.flatten()
+        if isinstance(self.input_image, bytearray):
+            self.input_image = bytes(self.input_image)
+
+        # It seems to be stuck at 200MBps, and this might be a python problem.
+        # zero-copy would definitely speed things up, but I'm not sure it's possible with OpenCV
+        # Memcpy should be 10-100 times faster at about 2-20GBps though,
+        # so if you can access & set the raw data from c++, then that would speed things up 100x
+        #
+        # Tried these. Didn't work:
+        #     self.input_image[start_index:end_index] = img.flat
+        #     memoryview(self.input_image)[start_index*4:end_index*4] = memoryview(img.tobytes())  # inpu_image is a bytearray here
+        #     memmove(id(self.input_image)+0x20+start_index*4, id(img.tobytes())+0x20, 4*(end_index-start_index))
+        #     Mem.view(self.input_image)[start_index*4:end_index*4] = img.data
+        # an alternative would be to store a list of pointers to img.data or tobytes() and their sizes & offsets, then use write with offset for setting the buffer
+        #np.copyto(self.input_image[start_index:end_index], img.flat, casting='no')
+        self.input_image[i] = (img, start_index)
 
     def get_tex_data_buffer(self):
         tex_data_bytes = bytearray()
@@ -166,8 +237,11 @@ class InputTextureInfosUBO(object):
             raise ValueError("Rect must contain 4 values (vec4)")
         self.tex_levels[level_idx]['rect'] = rect
 
-    def get_input_image_buffer(self):
-        return self.input_image.tobytes()
+    def get_input_image_buffer(self, writer):
+        for t in self.input_image:
+            img, start = t
+            writer(img.tobytes(), offset=start*4)
+        #return bytes(self.input_image)
 
     def set_input_image_buffer(self, data: np.ndarray):
         if len(data) != len(self.input_image):
@@ -187,10 +261,12 @@ class InputTextureInfosUBO(object):
 
 class UserInputUBO:
     def __init__(self):
+        self.sel_lvl = np.zeros((1),np.int32)
         self.iMouse = np.zeros((2,), np.float32)
 
     def to_bytes(self):
-        return struct.pack(f"<ff",
+        return struct.pack(f"<ixxxxff",
+                           *self.sel_lvl,
                            *self.iMouse)
 
     @property
@@ -260,7 +336,11 @@ class MglApp(object):
 
     def update_buffers(self):
         # Update uniform buffers
-        self.input_texture_ubo_buffer.write(self.input_texture_infos_ubo.get_input_image_buffer())
+        #buff = self.input_texture_infos_ubo.get_input_image_buffer()
+        #if len(buff)>10000:
+        #    pad = bytes(bytearray([0])*int(-len(buff)%1024))
+        #    self.input_texture_ubo_buffer.write_chunks(bytes(self.input_texture_infos_ubo.get_input_image_buffer()+pad), 0, 1024, int(np.ceil(len(buff)/1024)))
+        self.input_texture_infos_ubo.get_input_image_buffer(self.input_texture_ubo_buffer.write)
         self.input_texture_infos_ubo_buffer.write(self.input_texture_infos_ubo.get_tex_data_buffer())
         self.user_input_ubo_buffer.write(self.user_input_ubo.to_bytes())
         out_data = self.user_output_ubo_buffer.read()
@@ -276,9 +356,10 @@ class MglApp(object):
         self.update_buffers()
         self.quad_fs.render(self.shader)
 
+import time
 
 class MglWindow(object):
-    def __init__(self, timer=None, args=None, backend="pygame2"):
+    def __init__(self, timer=None, args=["--vs=1"], backend="pygame2"):
         if backend is not None:
             available = mgw.find_window_classes()
             assert backend in available, f"backend {backend} is not installed. Installed backends: {available}"
@@ -343,6 +424,8 @@ class MglWindow(object):
     def imshow(self, window_name, frame):
         if frame.dtype == np.uint8:
             frame = frame.astype(np.float32) / 255
+        elif frame.dtype != np.float32:
+            frame = frame.astype(np.float32)
 
         if window_name in self.window_names.keys():
             i = self.window_names[window_name]
@@ -359,9 +442,10 @@ class MglWindow(object):
         # Always bind the window framebuffer before calling render
         self.window.use()
 
-        self.window.render(current_time, delta)
         if not self.window.is_closing:
+            self.window.render(current_time, delta)
             self.window.swap_buffers()
+            time.sleep(0)
         else:
             _, duration = self.timer.stop()
             self.window.destroy()
