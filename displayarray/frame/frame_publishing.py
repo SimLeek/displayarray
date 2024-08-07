@@ -40,7 +40,7 @@ def spinwait_us(delay):
     #  thx: https://stackoverflow.com/a/74247651/782170
     target = time.perf_counter_ns() + delay * 1000
     while time.perf_counter_ns() < target:
-        pass
+        time.sleep(0)
 
 def pub_cam_loop_pyv4l2(
     cam_id: Union[int, str, np.ndarray],
