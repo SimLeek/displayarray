@@ -1,10 +1,13 @@
 #version 430
 
+//uniform sampler2D FontTexture;
+
 struct TexLevel {
     int startIdx;
     int width;
     int height;
     int flags;
+    int channels;
     vec4 rect; // 4 float representing position on triangle
 };
 
@@ -14,11 +17,10 @@ struct TexLevel {
 #define TEX_FLAG_BGR 1
 
 layout(std430, binding = 0) buffer InputBuffer {
-    float inputImage[];
+    int inputImage[];
 };
 
 layout(std430, binding = 1) buffer TexData {
-    int channels;
     int levels;
     TexLevel texLevels[];
 };
@@ -33,6 +35,13 @@ layout(std430, binding=3) buffer UserOutput {
     vec2 hit_pos;
 };
 
+#define EXTRACT_UINT8_VALUE(value, index) \
+    (((value) >> ((index)<<3)) & 0xFFu)
+#define EXTRACT_8_FROM_32_ARRAY(array, index) \
+    EXTRACT_UINT8_VALUE(array[index >> 2], index & 3)
+#define EXTRACT_FLOAT_FROM_INT8_ARRAY(array, index) \
+    float(EXTRACT_8_FROM_32_ARRAY(array, index))/255
+
 layout(origin_upper_left, pixel_center_integer) in vec4 gl_FragCoord;
 layout(location = 0) out vec4 out_color;
 
@@ -41,6 +50,12 @@ float bilinearInterpolation(float x, float y, float bottomLeft, float bottomRigh
     float right = mix(topRight, bottomRight, y);
     return mix(left, right, x);
 }
+
+/*vec4 print_char(vec2 p, int c)
+{
+    if (p.x < .0 || p.x > 1. || p.y < 0. || p.y > 1.) return vec4(0, 0, 0, 1e5);
+    return textureGrad(FontTexture, p / 16. + fract(vec2(c, 15 - c / 16) / 16.), dFdx(p / 16.), dFdy(p / 16.));
+}*/
 
 void main() {
     int our_level = -1;
@@ -77,10 +92,10 @@ void main() {
         y_current = int(levelHeight * (coord.y - texLevels[our_level].rect.y) / (texLevels[our_level].rect.w - texLevels[our_level].rect.y));
         x_current = int(levelWidth * (coord.x - texLevels[our_level].rect.x) / (texLevels[our_level].rect.z - texLevels[our_level].rect.x));
 
-        int topLeftIdx = texLevels[our_level].startIdx + int(floor(x_current) * texLevels[our_level].height * channels + floor(y_current) * channels);
-        int topRightIdx = topLeftIdx + texLevels[our_level].height * channels;
-        int bottomLeftIdx = topLeftIdx + channels;
-        int bottomRightIdx = topRightIdx + channels;
+        int topLeftIdx = texLevels[our_level].startIdx + int(floor(x_current) * texLevels[our_level].height * texLevels[our_level].channels + floor(y_current) * texLevels[our_level].channels);
+        int topRightIdx = topLeftIdx + texLevels[our_level].height * texLevels[our_level].channels;
+        int bottomLeftIdx = topLeftIdx + texLevels[our_level].channels;
+        int bottomRightIdx = topRightIdx + texLevels[our_level].channels;
 
         //leave this for visual debugging
         out_color = vec4(float(y_current) / float(levelHeight), float(x_current) / float(levelWidth), 0.0, 1.0);
@@ -88,29 +103,31 @@ void main() {
         out_color.x = bilinearInterpolation(
             fract(x_current),
             fract(y_current),
-            inputImage[bottomLeftIdx],
-            inputImage[bottomRightIdx],
-            inputImage[topLeftIdx],
-            inputImage[topRightIdx]
+            EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,bottomLeftIdx),
+            EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,bottomRightIdx),
+            EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,topLeftIdx),
+            EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,topRightIdx)
         );
-        if (channels > 1) {
+        if (texLevels[our_level].channels > 1) {
             out_color.y = bilinearInterpolation(
                 fract(x_current),
                 fract(y_current),
-                inputImage[bottomLeftIdx + 1],
-                inputImage[bottomRightIdx + 1],
-                inputImage[topLeftIdx + 1],
-                inputImage[topRightIdx + 1]
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,bottomLeftIdx + 1),
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,bottomRightIdx + 1),
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,topLeftIdx + 1),
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,topRightIdx + 1)
             );
+        }else{
+            out_color.xyz = out_color.xxx;
         }
-        if (channels > 2) {
+        if (texLevels[our_level].channels > 2) {
             out_color.z = bilinearInterpolation(
                 fract(x_current),
                 fract(y_current),
-                inputImage[bottomLeftIdx + 2],
-                inputImage[bottomRightIdx + 2],
-                inputImage[topLeftIdx + 2],
-                inputImage[topRightIdx + 2]
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,bottomLeftIdx + 2),
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,bottomRightIdx + 2),
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,topLeftIdx + 2),
+                EXTRACT_FLOAT_FROM_INT8_ARRAY(inputImage,topRightIdx + 2)
             );
         }
         if (bool(texLevels[our_level].flags & TEX_FLAG_BGR)) {
@@ -137,6 +154,28 @@ void main() {
             ) {
                 out_color = vec4(0.0, 0.5, 0.0, 1.0); // green selection border, on top of everything
             }
+
+            /*vec2 textPos = vec2(texLevels[sel_level].rect.x + 5, texLevels[sel_level].rect.y + 5);
+            if (coord.x >= textPos.x && coord.y >= textPos.y &&
+                coord.x < textPos.x + 100 && coord.y < textPos.y + 16) // Text area dimensions
+            {
+                int window_name_ptr = string_ptrs[sel_level];
+                int end_ptr = string_ptrs[sel_level+1];
+                int char_index = 0;
+                vec2 uv = (coord - textPos);
+                float FontSize = 8.;
+                vec2 U = uv * 64.0 / FontSize;
+                vec4 O = vec4(0.0);
+
+                while (char_index < end_ptr) {
+                    int char_code = strings[window_name_ptr+char_index];
+                    if (char_code == 0) break; // Null terminator for string
+                    U.x -= .5; O += print_char(U, char_code);
+                    char_index++;
+                }
+
+                out_color = mix(out_color, O.xxxx, step(0.0, O.x)); // Blend text over the existing color
+            }*/
         }
     }
 

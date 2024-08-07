@@ -18,12 +18,12 @@ try:
 
         using_pyv4l2cam = True
 except ImportError:
-    pass
     # while this is still good for raspberry pi, OpenCV tends to be faster for normal computers.
-    #warnings.warn("Could not import PyV4L2Cam on linux. Camera capture will be slow.")
-    #warnings.warn(
-    #    "To install, run: pip install git+https://github.com/simleek/PyV4L2Cam.git"
-    #)
+    if sys.platform == "linux":
+        warnings.warn("Could not import PyV4L2Cam on linux. Camera capture will be slow.")
+        warnings.warn(
+            "To install, run: pip install git+https://github.com/simleek/PyV4L2Cam.git"
+        )
 
 import numpy as np
 
@@ -36,6 +36,11 @@ from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
+def spinwait_us(delay):
+    #  thx: https://stackoverflow.com/a/74247651/782170
+    target = time.perf_counter_ns() + delay * 1000
+    while time.perf_counter_ns() < target:
+        pass
 
 def pub_cam_loop_pyv4l2(
     cam_id: Union[int, str, np.ndarray],
@@ -83,7 +88,7 @@ def pub_cam_loop_pyv4l2(
 
     now = time.time()
     while msg != "quit":
-        time.sleep(1.0 / (fps_limit - (time.time() - now)))
+        spinwait_us(1000000 / (fps_limit - (time.time() - now)))
         now = time.time()
         frame_bytes = cam.get_frame()  # type: bytes
 
@@ -95,7 +100,11 @@ def pub_cam_loop_pyv4l2(
             raise NotImplementedError(f"{cam.pixel_format} format not supported.")
 
         if nd_frame is not None:
-            subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(nd_frame)
+            try:
+                subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(nd_frame)
+            except KeyError:  # not sure why this happens, but I know I want it to exit correctly in this case
+                cam.close()
+                break
         else:
             cam.close()
             subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
@@ -162,24 +171,32 @@ def pub_cam_loop_opencv(
 
     cam.set(cv2.CAP_PROP_FRAME_WIDTH, request_size[0])
     cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
+    count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
 
     if not cam.isOpened():
         subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
         return False
     now = time.time()
     while msg != "quit":
-        time.sleep(1.0 / (fps_limit - (time.time() - now)))
-        now = time.time()
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
         if ret is False or not isinstance(frame, (np.ndarray, list)):
             cam.release()
-            subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
-            return False
-        if cam.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
-            frame_counter += 1
-            if frame_counter >= cam.get(cv2.CAP_PROP_FRAME_COUNT):
+            if count>0:  # sometimes mp4s just fail
                 frame_counter = 0
                 cam = cv2.VideoCapture(cam_id)
+            else:
+                subscriber_dictionary.CV_CAMS_DICT[name].status_pub.publish("failed")
+                return False
+        if count > 0:
+            frame_counter += 1
+            if frame_counter >= count-1:
+                frame_counter = 0
+                cam.release()
+                cam = cv2.VideoCapture(cam_id)
+        time2 = time.time()
+        #time.sleep(0.1 / (fps_limit - (time2 - now)))
+        spinwait_us(1000000 / (fps_limit - (time2 - now)))
+        now = time.time()
         try:
             subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)
         except KeyError:  # we got deleted. Time to exit.

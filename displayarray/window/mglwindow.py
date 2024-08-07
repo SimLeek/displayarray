@@ -43,6 +43,35 @@ class MglWindowConfig(mgw.WindowConfig):
                 self.last_frame = frame
                 self.uibo.sel_lvl[0] = frame
 
+    def mouse_scroll_event(self, x_offset: float, y_offset: float):
+        if self.hit_buff is not None:
+            rect = self.rbuf.tex_levels[self.last_frame]['rect']
+            swap = self.rbuf.tex_levels[self.last_frame]['flags']&8
+
+            # Calculate current width and height of the rectangle
+            width = self.rbuf.tex_levels[self.last_frame]['width']
+            height = self.rbuf.tex_levels[self.last_frame]['height']
+
+            # Calculate scale factor (for example, 1% per scroll unit)
+            scale_factor = 0.1 * y_offset
+
+            # Calculate adjustment based on scale factor
+            width_adjustment = width * scale_factor
+            height_adjustment = height * scale_factor
+
+            if not swap:
+                # Adjust the top-left and bottom-right corners
+                rect[0] -= width_adjustment / 2  # Left
+                rect[1] -= height_adjustment / 2  # Top
+                rect[2] += width_adjustment / 2  # Right
+                rect[3] += height_adjustment / 2  # Bottom
+            else:
+                # Adjust the top-left and bottom-right corners
+                rect[0] -= width_adjustment / 2  # Left
+                rect[1] -= height_adjustment / 2  # Top
+                rect[2] += width_adjustment / 2  # Right
+                rect[3] += height_adjustment / 2  # Bottom
+
     def mouse_press_event(self, x, y, button):
         # sometimes mouse position event doesn't always trigger, so clicking can now help
         if self.uibo is not None:
@@ -118,6 +147,11 @@ def create_no_input_texture(width=100, height=100):
 
     return img
 
+def pad_8_to_32(arr):
+    pad_len = -arr.size * np.dtype(arr.dtype).itemsize % np.dtype(np.float32).itemsize
+    if pad_len != 0:
+        arr = np.pad(arr.flatten(), (0, pad_len))
+    return arr.flatten().view(np.float32)
 
 class InputTextureInfosUBO(object):
     def __init__(self, start_textures=[]):
@@ -146,16 +180,20 @@ class InputTextureInfosUBO(object):
             start_index = 0
         else:
             start_index = self.tex_levels[-1]['startIdx']+\
-                          self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.channels
+                          self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
         width = img.shape[0]
         height = img.shape[1]
-        assert img.shape[2] == self.channels
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
         rect = [0,0,width,height]
         self.tex_levels.append({
             'startIdx': start_index,
             'width': width,
             'height': height,
             'flags': flags,
+            'channels': channels,
             'rect': rect
         })
         if isinstance(self.input_image, bytes):
@@ -163,25 +201,32 @@ class InputTextureInfosUBO(object):
         #self.input_image = np.concatenate((self.input_image, img.flatten()), axis=0, dtype=self.input_image.dtype)
         #self.input_image[start_index:] =  img.flatten()
         #self.input_image.extend(img.tobytes())
+        #img = pad_8_to_32(img)
         self.input_image.append((img, start_index))
 
         return i
 
+
     def set_input_stream(self, i, img:np.ndarray, flags:int=0):
         start_index = self.tex_levels[i]['startIdx']
-        end_index = start_index + img.shape[0] * img.shape[1] * self.channels
+        # end_index = start_index + img.shape[0] * img.shape[1] *
         # assert img.shape[2] == self.channels
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
         if i!=len(self.tex_levels) and \
             self.tex_levels[i]['width']*self.tex_levels[i]['height']!=img.shape[0]*img.shape[1]:
             ind = start_index
             for j in range(i, len(self.tex_levels)):
-                new_start_index = ind + img.shape[0]*img.shape[1]*self.channels
+                new_start_index = ind + img.shape[0]*img.shape[1]*channels
                 self.tex_levels[j]['startIdx'] = new_start_index
                 ind = new_start_index
 
         self.tex_levels[i]['width'] = img.shape[0]
         self.tex_levels[i]['height'] = img.shape[1]
         self.tex_levels[i]['flags'] = flags
+        self.tex_levels[i]['channels'] = channels
 
         if isinstance(self.input_image, bytearray):
             self.input_image = bytes(self.input_image)
@@ -198,17 +243,19 @@ class InputTextureInfosUBO(object):
         #     Mem.view(self.input_image)[start_index*4:end_index*4] = img.data
         # an alternative would be to store a list of pointers to img.data or tobytes() and their sizes & offsets, then use write with offset for setting the buffer
         #np.copyto(self.input_image[start_index:end_index], img.flat, casting='no')
+        #img = pad_8_to_32(img)
         self.input_image[i] = (img, start_index)
 
     def get_tex_data_buffer(self):
         tex_data_bytes = bytearray()
-        tex_data_bytes.extend(struct.pack("<2ixxxxxxxx", self.channels, len(self.tex_levels)))
+        # glsl is alligned to vec4 or 128 bits or 32 bytes (32 xs)
+        tex_data_bytes.extend(struct.pack("<1ixxxxxxxxxxxx", len(self.tex_levels)))
         for level in self.tex_levels:
-            tex_data_bytes.extend(struct.pack("<4i", level['startIdx'], level['width'], level['height'], level['flags'])) # todo: add 4th int holding flags (rgb order, w/h order)
+            tex_data_bytes.extend(struct.pack("<5i"+"x"*4*3, level['startIdx'], level['width'], level['height'], level['flags'], level['channels'])) # todo: add 4th int holding flags (rgb order, w/h order)
             tex_data_bytes.extend(struct.pack("<4f", *level['rect']))
         return bytes(tex_data_bytes)
 
-    def set_tex_data_buffer(self, data):
+    def set_tex_data_buffer(self, data):  # todo: unusued, remove or update
         if len(data) - 2 % 7 != 0:
             raise ValueError("Input data size does not match buffer format")
         self.channels = data[0]
@@ -219,7 +266,7 @@ class InputTextureInfosUBO(object):
             self.tex_levels[i]['height'] = data[i * 7 + 4]
             self.tex_levels[i]['rect'] = data[i * 7 + 5:i * 7 + 9]
 
-    def append_tex_data_buffer(self, data):
+    def append_tex_data_buffer(self, data):  # todo: unusued, remove or update
         if len(data) != 7:
             raise ValueError("Input data size does not match buffer format")
         self.tex_levels.append({
@@ -240,7 +287,7 @@ class InputTextureInfosUBO(object):
     def get_input_image_buffer(self, writer):
         for t in self.input_image:
             img, start = t
-            writer(img.tobytes(), offset=start*4)
+            writer(img.tobytes(), offset=start)
         #return bytes(self.input_image)
 
     def set_input_image_buffer(self, data: np.ndarray):
@@ -323,7 +370,7 @@ class MglApp(object):
         self.shader = self.ctx.program(vertex_shader=self.vertex_shader, fragment_shader=self.fragment_shader)
 
         self.input_texture_ubo_buffer = self.ctx.buffer(reserve=4*1920*1080*4*3, dynamic=True)
-        self.input_texture_infos_ubo_buffer = self.ctx.buffer(reserve=4*30*7+4*2, dynamic=True)
+        self.input_texture_infos_ubo_buffer = self.ctx.buffer(reserve=4*30*9*4+4*2, dynamic=True)
         self.user_input_ubo_buffer = self.ctx.buffer(self.user_input_ubo.to_bytes(), dynamic=False)
         self.user_output_ubo_buffer = self.ctx.buffer(self.user_output_ubo.to_bytes(), dynamic=False)
 
@@ -422,10 +469,10 @@ class MglWindow(object):
         self.window_names = {}
 
     def imshow(self, window_name, frame):
-        if frame.dtype == np.uint8:
-            frame = frame.astype(np.float32) / 255
-        elif frame.dtype != np.float32:
-            frame = frame.astype(np.float32)
+        if frame.dtype in [np.float32, np.float64]:
+            frame = (frame*255).astype(np.uint8)  # 0 to 1 to 0 to 255
+        elif frame.dtype not in [np.uint8, np.int8]:
+            frame = frame.astype(np.uint8)
 
         if window_name in self.window_names.keys():
             i = self.window_names[window_name]

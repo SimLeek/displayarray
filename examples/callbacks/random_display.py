@@ -1,12 +1,16 @@
 from displayarray import display
 import numpy as np
 
-arr = np.random.normal(0.5, 0.1, (500, 500, 3))
+arr = np.random.randint(0, 10, (1000, 900), dtype=np.uint8)
+arr2 = np.random.randint(240, 255, (400, 500, 3), dtype=np.uint8)
+arr3 = np.random.randint(127, 137, (250, 150, 3), dtype=np.uint8)
+arr4 = np.random.randint(45, 55, (128, 28, 3), dtype=np.uint8)
+arr5 = np.random.randint(190, 200, (32, 64, 3), dtype=np.uint8)
 
 
 def fix_arr_cv(arr_in):
-    arr_in[:] += np.random.normal(0.01, 0.005, (500, 500, 3))
-    arr_in %= 1.0
+    arr_in[:] += np.random.randint(0, 2, arr_in.shape, dtype=np.uint8)
+    arr_in %= 255
 
 
-display(arr, callbacks=fix_arr_cv, blocking=True)
+display(*[arr, arr2, arr3, arr4, arr5], window_names=['1','2','3','4','5'], callbacks=fix_arr_cv, blocking=True)
