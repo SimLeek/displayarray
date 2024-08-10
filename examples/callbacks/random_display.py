@@ -13,4 +13,4 @@ def fix_arr_cv(arr_in):
     arr_in %= 255
 
 
-display(*[arr, arr2, arr3, arr4, arr5], window_names=['1','2','3','4','5'], callbacks=fix_arr_cv, blocking=True)
+display(*[arr, arr2, arr3, arr4, arr5], callbacks=fix_arr_cv, blocking=True)

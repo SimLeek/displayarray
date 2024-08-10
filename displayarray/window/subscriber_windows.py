@@ -121,7 +121,7 @@ class SubscriberWindows(object):
         """Capture key input for the escape function and passing to key control subscriber threads."""
         if key_input in self.ESC_KEY_CODES:
             for name in self.window_names:
-                cv2.destroyWindow(name + " (press ESC to quit)")
+                cv2.destroyWindow(name)
             self.exited = True
             window_commands.quit()
             self.__stop_all_cams()
@@ -162,9 +162,9 @@ class SubscriberWindows(object):
                         )
                     else:
                         if len(self.window_names) <= win_num:
-                            self.add_window(f"{prepend_name}{win_num}")
+                            self.add_window(f"{prepend_name}_{f_name}_{win_num}")
                         self.displayer.imshow(
-                            self.window_names[win_num] + " (press ESC to quit)", f[i]
+                            self.window_names[win_num], f[i]
                         )
                         win_num += 1
         else:
@@ -183,7 +183,7 @@ class SubscriberWindows(object):
                     if len(self.window_names) <= win_num:
                         self.add_window(f"{prepend_name} {win_num}")
                     self.displayer.imshow(
-                        self.window_names[win_num] + " (press ESC to quit)", frames[f]
+                        self.window_names[win_num], frames[f]
                     )
                     win_num += 1
         return win_num
@@ -467,7 +467,7 @@ def display(
     for v in vid_threads:
         v.start()
     if window_names is None:
-        window_names = ["window {}".format(i) for i in range(len(vids))]
+        window_names = [f"{uid_for_source(i)}" for i in vids]
     if blocking:
         SubscriberWindows(
             window_names=window_names, video_sources=vids, silent=silent

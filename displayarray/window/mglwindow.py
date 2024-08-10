@@ -6,6 +6,7 @@ import struct
 from moderngl_window import geometry
 import os
 import rectpack
+from displayarray.font.get_texture_atlas import get_or_create_font_npz
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -157,24 +158,11 @@ class InputTextureInfosUBO(object):
     def __init__(self, start_textures=[]):
         self.channels = 3  # Assuming RGB format
         self.tex_levels = []
-        #self.input_image: np.ndarray = np.asarray([], dtype=np.float32)
-        #self.input_image:bytearray = bytearray()
         self.input_image = []
+        self.names = []
         self.no_input = not bool(start_textures)
 
-        # Initialize input image buffer with a default "no input" image
-        #if not start_textures:
-        #    start_textures = [create_no_input_texture()]
-
-        # Initialize texture levels with default values
-        #for s in start_textures:
-        #    tex_level = {'startIdx': 0, 'width': s.shape[0], 'height': s.shape[1], 'flags':0, 'rect': [1.0, 0.0, 0.0, 1.0]}
-        #    self.tex_levels.append(tex_level)
-            #self.input_image.extend(s.astype(np.float32).tobytes())
-            #self.input_image = np.concatenate((self.input_image, s.flatten()), axis=0, dtype=self.input_image.dtype)
-        #    self.input_image.append((s, 0))
-
-    def append_input_stream(self, img:np.ndarray, flags:int=0):
+    def append_input_stream(self, img:np.ndarray, name="Unnamed", flags:int=0):
         i = len(self.tex_levels)
         if i==0:
             start_index = 0
@@ -198,19 +186,14 @@ class InputTextureInfosUBO(object):
         })
         if isinstance(self.input_image, bytes):
             self.input_image = bytearray(self.input_image)
-        #self.input_image = np.concatenate((self.input_image, img.flatten()), axis=0, dtype=self.input_image.dtype)
-        #self.input_image[start_index:] =  img.flatten()
-        #self.input_image.extend(img.tobytes())
-        #img = pad_8_to_32(img)
         self.input_image.append((img, start_index))
+        self.names.append(name)
 
         return i
 
-
-    def set_input_stream(self, i, img:np.ndarray, flags:int=0):
+    def set_input_stream(self, i, img:np.ndarray, name = None, flags:int=0):
+        # todo: deal with setting index that doesn't exist
         start_index = self.tex_levels[i]['startIdx']
-        # end_index = start_index + img.shape[0] * img.shape[1] *
-        # assert img.shape[2] == self.channels
         if len(img.shape)==2:
             channels = 1
         else:
@@ -230,6 +213,10 @@ class InputTextureInfosUBO(object):
 
         if isinstance(self.input_image, bytearray):
             self.input_image = bytes(self.input_image)
+        if name is not None:
+            self.names[i] = name
+        else:
+            self.names[i] = f"Unnamed {i}"
 
         # It seems to be stuck at 200MBps, and this might be a python problem.
         # zero-copy would definitely speed things up, but I'm not sure it's possible with OpenCV
@@ -245,6 +232,30 @@ class InputTextureInfosUBO(object):
         #np.copyto(self.input_image[start_index:end_index], img.flat, casting='no')
         #img = pad_8_to_32(img)
         self.input_image[i] = (img, start_index)
+
+    def get_name_str_buffers(self, start_index=0, num_strings=None):
+        # note: start index will tell which section these strings start at, so menu items can use other string sections
+        # note2: if num_strings is an int, we'll set the start, otherwise we return part of all sections
+        name_bytes = bytearray()
+        name_ptr_bytes = bytearray()
+
+        if start_index==0:
+            if num_strings is None:
+                name_ptr_bytes.extend(struct.pack("<1i", len(self.names)))
+                #name_ptr_bytes.extend(struct.pack("<1ixxxxxxxxxxxx", len(self.names)))
+            else:
+                name_ptr_bytes.extend(struct.pack("<1i", len(self.names)))
+                #name_ptr_bytes.extend(struct.pack("<1ixxxxxxxxxxxx", num_strings))
+        name_ptrs = [start_index]
+        for name in self.names:
+            name_ptrs.append(name_ptrs[-1]+len(name))
+        if len(name_ptrs)%4!=0:
+            name_ptrs.extend([name_ptrs[-1]]*int(-len(name_ptrs)%4))
+        name_ptr_bytes.extend(struct.pack(f"<{len(name_ptrs)}i", *name_ptrs))
+        for name in self.names:
+            name_bytes.extend(struct.pack(f"<{len(name)}i", *[ord(n) for n in name]))
+        return name_bytes, name_ptr_bytes
+
 
     def get_tex_data_buffer(self):
         tex_data_bytes = bytearray()
@@ -379,7 +390,45 @@ class MglApp(object):
         self.user_input_ubo_buffer.bind_to_storage_buffer(2)
         self.user_output_ubo_buffer.bind_to_storage_buffer(3)
 
+        npz_data = np.load(get_or_create_font_npz(), allow_pickle=True)
+
+        self.glyph_image_ubo = self.ctx.buffer(reserve=npz_data['atlas_texture'].size*2+5, dynamic=False)
+        self.glyph_image_ubo.bind_to_storage_buffer(4)
+        self.glyph_image_ubo.write(self.load_atlas_image_data(npz_data))
+
+        self.glyph_buffer_ubo = self.ctx.buffer(reserve=33*len(npz_data['metadata'].item()), dynamic=False)
+        self.glyph_buffer_ubo.bind_to_storage_buffer(5)
+        self.glyph_buffer_ubo.write(self.load_atlas_glyph_data(npz_data))
+
+        self.input_name_buffer = self.ctx.buffer(reserve=16384, dynamic=True)
+        self.input_name_ptr_buffer = self.ctx.buffer(reserve=1024, dynamic=True)
+        self.input_name_buffer.bind_to_storage_buffer(6)
+        self.input_name_ptr_buffer.bind_to_storage_buffer(7)
+
         self.update_buffers()
+
+    def load_atlas_glyph_data(self, npz_data):
+        atlas_data = npz_data['metadata'].item()
+
+        atlas_data_bytes = bytearray()
+        # glsl is alligned to vec4 or 128 bits or 32 bytes (32 xs)
+        #atlas_data_bytes.extend(struct.pack("<1i" + "x" * 4 * 3, len(atlas_data)))
+        #for c, bbox in atlas_data.items():
+        #    atlas_data_bytes.extend(struct.pack("<5i"+"x"*4*3, ord(c), *bbox))
+        atlas_data_bytes.extend(struct.pack("<1i", len(atlas_data)))
+        for c, bbox in atlas_data.items():
+            atlas_data_bytes.extend(struct.pack("<5i", ord(c), *[bbox[1], bbox[0], bbox[3], bbox[2]]))
+        return bytes(atlas_data_bytes)
+
+    def load_atlas_image_data(self, npz_data):
+        atlas_data = npz_data['atlas_texture']
+
+        atlas_data_bytes = bytearray()
+        # glsl is alligned to vec4 or 128 bits or 32 bytes (32 xs)
+        #atlas_data_bytes.extend(struct.pack("<2i" + "x" * 4 * 2, *atlas_data.shape))
+        atlas_data_bytes.extend(struct.pack("<2i", *atlas_data.shape))
+        atlas_data_bytes.extend(atlas_data.tobytes())
+        return bytes(atlas_data_bytes)
 
     def update_buffers(self):
         # Update uniform buffers
@@ -389,6 +438,9 @@ class MglApp(object):
         #    self.input_texture_ubo_buffer.write_chunks(bytes(self.input_texture_infos_ubo.get_input_image_buffer()+pad), 0, 1024, int(np.ceil(len(buff)/1024)))
         self.input_texture_infos_ubo.get_input_image_buffer(self.input_texture_ubo_buffer.write)
         self.input_texture_infos_ubo_buffer.write(self.input_texture_infos_ubo.get_tex_data_buffer())
+        names, name_ptrs = self.input_texture_infos_ubo.get_name_str_buffers()
+        self.input_name_buffer.write(names)
+        self.input_name_ptr_buffer.write(name_ptrs)
         self.user_input_ubo_buffer.write(self.user_input_ubo.to_bytes())
         out_data = self.user_output_ubo_buffer.read()
         int_list = []
@@ -476,9 +528,9 @@ class MglWindow(object):
 
         if window_name in self.window_names.keys():
             i = self.window_names[window_name]
-            self.app.input_texture_infos_ubo.set_input_stream(i, frame, flags=9)
+            self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=9)
         else:
-            self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, flags=9)
+            self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=9)
 
     def update(self):
         current_time, delta = self.timer.next_frame()

@@ -1,7 +1,8 @@
 from PIL import ImageFont, ImageDraw, Image
 import numpy as np
-from get_fonts import get_default_font
-
+from displayarray.font.get_fonts import get_default_font
+from fontTools.ttLib import TTFont
+import os
 
 def load_font(ttf_path=None, font_size=32):
     if ttf_path is None:
@@ -9,13 +10,24 @@ def load_font(ttf_path=None, font_size=32):
     font = ImageFont.truetype(ttf_path, font_size)
     return font
 
+def get_available_characters(font_path):
+    if font_path is None:
+        font_path = get_default_font()
+    font = TTFont(font_path)
+    available_chars = []
+    #for char_code in range(0x110000):
+    for table in font['cmap'].tables:
+        #if char_code in table.cmap.keys():
+        for key, value in table.cmap.items():
+            available_chars.append(chr(key))
+    return available_chars
 
 def render_glyphs(font, characters):
     glyphs = {}
     max_width = max_height = 0
     for char in characters:
         bbox = font.getbbox(char)
-        size = bbox[2]-bbox[0], bbox[3]
+        size = bbox[2], bbox[3]
         #size = font.size, font.font.height
         image = Image.new('L', size=size)
         draw = ImageDraw.Draw(image)
@@ -28,11 +40,12 @@ def render_glyphs(font, characters):
 
 def create_texture_atlas(glyphs, max_width, max_height):
     num_glyphs = len(glyphs)
-    h = int(np.ceil(np.sqrt(num_glyphs)))
-    w = int(np.floor(np.sqrt(num_glyphs)))
-    atlas_width = max_width * w
-    atlas_height = max_height * h
+    res = num_glyphs*max_width*max_height
+    atlas_height = int(np.ceil(np.sqrt(res)))
+    atlas_width = int(np.floor(np.sqrt(res)))
     atlas_image = Image.new('L', (atlas_width, atlas_height))
+
+    # note: tried rectpack here. It took forever. Not really worth the slight compression.
 
     x_offset = 0
     y_offset = 0
@@ -66,21 +79,51 @@ def generate_glyph_metadata(glyph_data, atlas_width, atlas_height):
 
 
 def create_font_texture_atlas(ttf_path=None, font_size=12,
-                              characters=[chr(i) for i in range(256)]):
+                              characters=None):
     font = load_font(ttf_path, font_size)
+    if characters is None:
+        characters = get_available_characters(ttf_path)
     glyphs, max_width, max_height = render_glyphs(font, characters)
     atlas_image, glyph_data = create_texture_atlas(glyphs, max_width, max_height)
-    metadata = generate_glyph_metadata(glyph_data, atlas_image.width, atlas_image.height)
+    #metadata = generate_glyph_metadata(glyph_data, atlas_image.width, atlas_image.height)
 
     # Convert atlas image to a format suitable for OpenGL (e.g., numpy array)
     atlas_texture = np.array(atlas_image)
 
-    return atlas_texture, metadata
+    return atlas_texture, glyph_data
+
+
+def get_or_create_font_npz(ttf_path=None, font_size=14, characters=None):
+    # Get the directory of the current script
+    script_dir = os.path.dirname(__file__)
+
+    # Generate the filename based on the font name and size
+    if ttf_path is None:
+        ttf_path = get_default_font()
+    font_name = os.path.basename(ttf_path).split('.')[0]
+    npz_filename = f"{font_name}_{font_size}.npz"
+    npz_filepath = os.path.join(script_dir, npz_filename)
+
+    # Check if the .npz file exists
+    if os.path.exists(npz_filepath):
+        return npz_filepath
+
+    atlas_texture, metadata = create_font_texture_atlas(ttf_path=ttf_path, font_size=font_size,
+                                                        characters=characters)
+
+    # If not, create the .npz file with the atlas texture and metadata
+    np.savez_compressed(npz_filepath, atlas_texture=atlas_texture, metadata=metadata)
+
+    return npz_filepath
 
 
 if __name__ == '__main__':
-    atlas_texture, metadata = create_font_texture_atlas(font_size=32,
-                                                        characters=[chr(i) for i in range(256)])
+
+    #get_or_create_font_npz()
+
+    atlas_texture, metadata = create_font_texture_atlas(ttf_path=None, font_size=24,
+                                                        characters=None)
+
     print("Texture atlas created with metadata:", metadata)
 
     from displayarray import DirectDisplay

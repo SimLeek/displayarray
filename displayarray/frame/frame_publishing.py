@@ -36,6 +36,10 @@ from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 
 FrameCallable = Callable[[np.ndarray], Optional[np.ndarray]]
 
+# todo: if we need more accurate framerates, we'll just have to use a PID, Adam, or other optimizer
+#  spinwait is accurate, but uses too much compute and slows down other operations
+#  sleep doesn't use compute, but is inaccurate
+#  using an optimizer would allow automatically changing the 1.0/fps in sleep to 0.9 ot 1.1 to make sleep more accurate
 def spinwait_us(delay):
     #  thx: https://stackoverflow.com/a/74247651/782170
     target = time.perf_counter_ns() + delay * 1000
@@ -88,7 +92,8 @@ def pub_cam_loop_pyv4l2(
 
     now = time.time()
     while msg != "quit":
-        spinwait_us(1000000 / (fps_limit - (time.time() - now)))
+        #spinwait_us(1000000 / (fps_limit - (time.time() - now)))
+        time.sleep(1.0/(fps_limit - (time.time() - now)))
         now = time.time()
         frame_bytes = cam.get_frame()  # type: bytes
 
@@ -194,8 +199,8 @@ def pub_cam_loop_opencv(
                 cam.release()
                 cam = cv2.VideoCapture(cam_id)
         time2 = time.time()
-        #time.sleep(0.1 / (fps_limit - (time2 - now)))
-        spinwait_us(1000000 / (fps_limit - (time2 - now)))
+        time.sleep(1.0 / (fps_limit - (time2 - now)))
+        #spinwait_us(1000000 / (fps_limit - (time2 - now)))
         now = time.time()
         try:
             subscriber_dictionary.CV_CAMS_DICT[name].frame_pub.publish(frame)

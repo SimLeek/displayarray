@@ -109,3 +109,5 @@ venv.bak/
 .pytest_cache/
 .coveragerc
 *.mp4
+
+*.npz
