@@ -12,4 +12,4 @@ from . import subscriber_dictionary
 from .frame_updater import FrameUpdater
 from .get_frame_ids import get_cam_ids
 from .np_to_opencv import NpCam
-from .frame_publishing import pub_cam_thread
+from .frame_publishing import pub_cam_thread, PubCamCV

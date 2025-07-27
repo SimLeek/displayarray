@@ -23,7 +23,7 @@ Options:
 
 from docopt import docopt
 import asyncio
-
+import numpy as np
 
 def main(argv=None):
     """Process command line arguments."""
@@ -33,14 +33,21 @@ def main(argv=None):
 
         print(f"DisplayArray V{__version__}")
         return
-    from displayarray import display
+    from displayarray import DirectRead, DirectDisplay
 
     vids = [int(w) for w in arguments["--webcam"]] + arguments["--video"]
     v_disps = None
+    display = DirectDisplay()
     if vids:
-        v_disps = display(*vids, blocking=False)
-        while v_disps:
-            pass
+        v_disps = DirectRead(*vids)
+        for frame_dict in v_disps:
+            for name, frame in frame_dict.items():
+                im = frame.astype(np.uint8)
+                display.imshow(f'{name}', im)
+            display.update()
+            if display.window.is_closing:
+                break
+            continue
 
 
 

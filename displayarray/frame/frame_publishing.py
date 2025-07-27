@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import warnings
+from typing import Union, Tuple, Optional, List, Iterator, Dict
 
 import cv2
 
@@ -31,6 +32,18 @@ from displayarray.frame import subscriber_dictionary
 from .np_to_opencv import NpCam
 from .zmq_to_opencv import ZmqCam
 from displayarray._uid import uid_for_source
+
+try:
+    import torch
+    pytorch_available = True
+except ImportError:
+    pytorch_available = False
+
+try:
+    import scipy
+    scipy_available = True
+except ImportError:
+    scipy_available = False
 
 from typing import Union, Tuple, Optional, Dict, Any, List, Callable
 
@@ -97,9 +110,9 @@ def pub_cam_loop_pyv4l2(
         now = time.time()
         frame_bytes = cam.get_frame()  # type: bytes
 
-        if cam.pixel_format == "MJPEG":
+        if cam.dest_pixel_format == "MJPEG":
             nd_frame = convert_mjpeg(frame_bytes)  # type: ignore
-        elif cam.pixel_format == "RGB24":
+        elif cam.dest_pixel_format == "RGB24":
             nd_frame = convert_rgb24(frame_bytes, cam.width, cam.height)  # type: ignore
         else:
             raise NotImplementedError(f"{cam.pixel_format} format not supported.")
@@ -149,7 +162,9 @@ def pub_cam_loop_opencv(
             cam = ZmqCam(cam_id)
         else:
             cam = cv2.VideoCapture(cam_id)
-    elif isinstance(cam_id, (np.ndarray)):
+    elif ((isinstance(cam_id, (np.ndarray)) or
+          (scipy_available and isinstance(cam_id, scipy.sparse.csr_matrix))) or
+          (pytorch_available and isinstance(cam_id, torch.Tensor) and cam_id.layout==torch.sparse_csr)):
         cam = NpCam(cam_id)
     else:
         raise TypeError(
@@ -184,7 +199,7 @@ def pub_cam_loop_opencv(
     now = time.time()
     while msg != "quit":
         (ret, frame) = cam.read()  # type: Tuple[bool, np.ndarray ]
-        if ret is False or not isinstance(frame, (np.ndarray, list)):
+        if ret is False or frame is None:
             cam.release()
             if count>0:  # sometimes mp4s just fail
                 frame_counter = 0
@@ -254,3 +269,128 @@ def pub_cam_thread(
         uid_dict[name] = t
         t.start()
     return t
+
+class PubCamCV:
+    """Iterator class to yield a dictionary of frames from one or more video sources without threading."""
+    def __init__(
+        self,
+        cam_id: Union[int, str, np.ndarray, List[Union[int, str, np.ndarray]]],
+        request_size: Union[Tuple[int, int], List[Tuple[int, int]]] = (-1, -1),
+        mjpg: bool = True,
+        fps_limit: float = None,
+        extra: Optional[List[Tuple[int, int]]] = None
+    ):
+        self.mjpg = mjpg
+        self.fps_limit = fps_limit
+        self.extra = extra
+        self.last_frame_time = time.time()
+
+        # Convert single cam_id to list for uniform handling
+        self.cam_ids = [cam_id] if not isinstance(cam_id, list) else cam_id
+        # Convert single request_size to list for all cameras
+        if isinstance(request_size, tuple):
+            self.request_sizes = [request_size] * len(self.cam_ids)
+        else:
+            self.request_sizes = request_size
+            if len(self.request_sizes) != len(self.cam_ids):
+                raise ValueError("Number of request_sizes must match number of cam_ids")
+
+        # Initialize cameras
+        self.cams = []
+        self.frame_counters = []
+        self.frame_counts = []
+        for cam_id, req_size in zip(self.cam_ids, self.request_sizes):
+            cam, frame_count = self._init_camera(cam_id, req_size)
+            self.cams.append(cam)
+            self.frame_counters.append(0)
+            self.frame_counts.append(frame_count)
+
+        # Set FPS limit (use minimum FPS from all cameras if inf)
+        if self.fps_limit == None:
+            fps_values = [cam.get(cv2.CAP_PROP_FPS) or float("inf") for cam in self.cams]
+            self.fps_limit = min(fps_values)
+        self.frame_interval = 1.0 / self.fps_limit if self.fps_limit != float("inf") else 0
+
+    def _init_camera(self, cam_id: Union[int, str, np.ndarray], request_size: Tuple[int, int]) -> Tuple[Union[cv2.VideoCapture, NpCam, ZmqCam], float]:
+        """Initialize a single camera or video source."""
+        if isinstance(cam_id, (int, str)):
+            if isinstance(cam_id, str) and cam_id.startswith('tcp'):
+                cam = ZmqCam(cam_id)
+            else:
+                cam = cv2.VideoCapture(cam_id)
+        elif ((isinstance(cam_id, np.ndarray)) or
+              (scipy_available and isinstance(cam_id, scipy.sparse.csr_matrix)) or
+              (pytorch_available and isinstance(cam_id, torch.Tensor) and cam_id.layout == torch.sparse_csr)):
+            cam = NpCam(cam_id)
+        else:
+            raise TypeError(
+                "Only strings or ints representing cameras, or numpy arrays representing pictures supported."
+            )
+
+        # Configure camera
+        if self.mjpg and isinstance(cam, cv2.VideoCapture):
+            try:
+                cam.set(cv2.CAP_PROP_FOURCC, cv2.CAP_OPENCV_MJPEG)
+            except AttributeError:
+                warnings.warn("Please update OpenCV")
+        if isinstance(cam, cv2.VideoCapture):
+            cam.set(cv2.CAP_PROP_FRAME_WIDTH, request_size[0])
+            cam.set(cv2.CAP_PROP_FRAME_HEIGHT, request_size[1])
+        frame_count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
+
+        if not cam.isOpened():
+            raise RuntimeError(f"Failed to open camera or video source: {cam_id}")
+
+        return cam, frame_count
+
+    def __iter__(self) -> Iterator[Dict[Union[int, str, np.ndarray], Optional[np.ndarray]]]:
+        """Yield a dictionary mapping cam_id to frames from all video sources with FPS limiting."""
+        while True:
+            start_time = time.time()
+            frame_dict = {}
+            any_valid = False
+
+            for i, (cam, cam_id, frame_count, req_size) in enumerate(zip(self.cams, self.cam_ids, self.frame_counts, self.request_sizes)):
+                ret, frame = cam.read()
+                if not ret or frame is None:
+                    if frame_count > 0:  # Loop video
+                        self.frame_counters[i] = 0
+                        cam.release()
+                        cam, frame_count = self._init_camera(cam_id, req_size)
+                        self.cams[i] = cam
+                        self.frame_counts[i] = frame_count
+                        ret, frame = cam.read()
+                    else:
+                        frame_dict[cam_id] = None
+                        continue
+                if ret and frame is not None:
+                    any_valid = True
+                    frame_dict[cam_id] = frame
+                else:
+                    frame_dict[cam_id] = None
+
+                if frame_count > 0:
+                    self.frame_counters[i] += 1
+                    if self.frame_counters[i] >= frame_count - 1:
+                        self.frame_counters[i] = 0
+                        cam.release()
+                        cam, frame_count = self._init_camera(cam_id, req_size)
+                        self.cams[i] = cam
+                        self.frame_counts[i] = frame_count
+
+            if not any_valid:
+                break
+
+            # Yield the dictionary of frames
+            yield frame_dict
+
+            # FPS limiting
+            elapsed = time.time() - start_time
+            sleep_time = max(0, self.frame_interval - elapsed)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+
+    def __del__(self):
+        """Clean up all camera resources."""
+        for cam in self.cams:
+            cam.release()

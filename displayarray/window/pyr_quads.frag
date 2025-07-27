@@ -10,6 +10,9 @@ struct TexLevel {
     int height;
     int flags;
     int channels;
+    int r_channel; //padding out 128 bits needed before float vec4, and useful for many channel arrays
+    int b_channel;
+    int g_channel;
     vec4 rect; // 4 float representing position on triangle
 };
 

@@ -7,6 +7,22 @@ from moderngl_window import geometry
 import os
 import rectpack
 from displayarray.font.get_texture_atlas import get_or_create_font_npz
+from typing import Union
+
+SparseType = None
+try:
+    import torch
+    pytorch_available = True
+    SparseType = Union[SparseType, torch.Tensor]
+except ImportError:
+    pytorch_available = False
+
+try:
+    import scipy
+    scipy_available = True
+    SparseType = Union[SparseType, scipy.sparse.csr_matrix]
+except ImportError:
+    scipy_available = False
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -34,7 +50,7 @@ class MglWindowConfig(mgw.WindowConfig):
         self.hit_buff = hit_buff
     def set_rect_buff(self, rect_buff: 'InputTextureInfosUBO'):
         self.rbuf = rect_buff
-    def mouse_position_event(self, x, y, dx, dy):
+    def on_mouse_position_event(self, x, y, dx, dy):
         if self.uibo is not None:
             self.uibo.iMouse[0] = float(x)
             self.uibo.iMouse[1] = float(y)
@@ -44,7 +60,7 @@ class MglWindowConfig(mgw.WindowConfig):
                 self.last_frame = frame
                 self.uibo.sel_lvl[0] = frame
 
-    def mouse_scroll_event(self, x_offset: float, y_offset: float):
+    def on_mouse_scroll_event(self, x_offset: float, y_offset: float):
         if self.hit_buff is not None:
             rect = self.rbuf.tex_levels[self.last_frame]['rect']
             swap = self.rbuf.tex_levels[self.last_frame]['flags']&8
@@ -73,7 +89,7 @@ class MglWindowConfig(mgw.WindowConfig):
                 rect[2] += width_adjustment / 2  # Right
                 rect[3] += height_adjustment / 2  # Bottom
 
-    def mouse_press_event(self, x, y, button):
+    def on_mouse_press_event(self, x, y, button):
         # sometimes mouse position event doesn't always trigger, so clicking can now help
         if self.uibo is not None:
             self.uibo.iMouse[0] = float(x)
@@ -84,7 +100,7 @@ class MglWindowConfig(mgw.WindowConfig):
                 self.last_frame = frame
                 self.uibo.sel_lvl[0] = frame
 
-    def mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
+    def on_mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
         if self.hit_buff is not None:
             rect = self.rbuf.tex_levels[self.last_frame]['rect']
             swap = self.rbuf.tex_levels[self.last_frame]['flags']&8
@@ -99,7 +115,7 @@ class MglWindowConfig(mgw.WindowConfig):
                 rect[2] += dy
                 rect[3] += dx
 
-    def key_event(self, key, action, modifiers):
+    def on_key_event(self, key, action, modifiers):
         if key == self.wnd.keys.P and action == self.wnd.keys.ACTION_PRESS:
             rects = []
             for i in range(len(self.rbuf.tex_levels)):
@@ -158,7 +174,10 @@ class InputTextureInfosUBO(object):
     def __init__(self, start_textures=[]):
         self.channels = 3  # Assuming RGB format
         self.tex_levels = []
+        self.csr_levels = []  # include start pointers and interleaved or not indices
         self.input_image = []
+        self.input_csr_value_indices = []
+        self.input_csr_index_pointers = []
         self.names = []
         self.no_input = not bool(start_textures)
 
@@ -192,6 +211,77 @@ class InputTextureInfosUBO(object):
         return i
 
     def set_input_stream(self, i, img:np.ndarray, name = None, flags:int=0):
+        # todo: deal with setting index that doesn't exist
+        start_index = self.tex_levels[i]['startIdx']
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
+        if i!=len(self.tex_levels) and \
+            self.tex_levels[i]['width']*self.tex_levels[i]['height']!=img.shape[0]*img.shape[1]:
+            ind = start_index
+            for j in range(i, len(self.tex_levels)):
+                new_start_index = ind + img.shape[0]*img.shape[1]*channels
+                self.tex_levels[j]['startIdx'] = new_start_index
+                ind = new_start_index
+
+        self.tex_levels[i]['width'] = img.shape[0]
+        self.tex_levels[i]['height'] = img.shape[1]
+        self.tex_levels[i]['flags'] = flags
+        self.tex_levels[i]['channels'] = channels
+
+        if isinstance(self.input_image, bytearray):
+            self.input_image = bytes(self.input_image)
+        if name is not None:
+            self.names[i] = name
+        else:
+            self.names[i] = f"Unnamed {i}"
+
+        # It seems to be stuck at 200MBps, and this might be a python problem.
+        # zero-copy would definitely speed things up, but I'm not sure it's possible with OpenCV
+        # Memcpy should be 10-100 times faster at about 2-20GBps though,
+        # so if you can access & set the raw data from c++, then that would speed things up 100x
+        #
+        # Tried these. Didn't work:
+        #     self.input_image[start_index:end_index] = img.flat
+        #     memoryview(self.input_image)[start_index*4:end_index*4] = memoryview(img.tobytes())  # inpu_image is a bytearray here
+        #     memmove(id(self.input_image)+0x20+start_index*4, id(img.tobytes())+0x20, 4*(end_index-start_index))
+        #     Mem.view(self.input_image)[start_index*4:end_index*4] = img.data
+        # an alternative would be to store a list of pointers to img.data or tobytes() and their sizes & offsets, then use write with offset for setting the buffer
+        #np.copyto(self.input_image[start_index:end_index], img.flat, casting='no')
+        #img = pad_8_to_32(img)
+        self.input_image[i] = (img, start_index)
+
+    def append_csr_input_stream(self, img:SparseType, name="Unnamed", flags:int=0):
+        i = len(self.tex_levels)
+        if i==0:
+            start_index = 0
+        else:
+            start_index = self.tex_levels[-1]['startIdx']+\
+                          self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
+        width = img.shape[0]
+        height = img.shape[1]
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
+        rect = [0,0,width,height]
+        self.tex_levels.append({
+            'startIdx': start_index,
+            'width': width,
+            'height': height,
+            'flags': flags,
+            'channels': channels,
+            'rect': rect
+        })
+        if isinstance(self.input_image, bytes):
+            self.input_image = bytearray(self.input_image)
+        self.input_image.append((img, start_index))
+        self.names.append(name)
+
+        return i
+
+    def set_csr_input_stream(self, i, img:SparseType, name = None, flags:int=0):
         # todo: deal with setting index that doesn't exist
         start_index = self.tex_levels[i]['startIdx']
         if len(img.shape)==2:
@@ -298,7 +388,7 @@ class InputTextureInfosUBO(object):
     def get_input_image_buffer(self, writer):
         for t in self.input_image:
             img, start = t
-            writer(img.tobytes(), offset=start)
+            writer(img.data, offset=start)
         #return bytes(self.input_image)
 
     def set_input_image_buffer(self, data: np.ndarray):
@@ -442,12 +532,12 @@ class MglApp(object):
         self.input_name_buffer.write(names)
         self.input_name_ptr_buffer.write(name_ptrs)
         self.user_input_ubo_buffer.write(self.user_input_ubo.to_bytes())
-        out_data = self.user_output_ubo_buffer.read()
-        int_list = []
-        for i in range(len(out_data)//4):
-            int_list.append(int.from_bytes(out_data[i*4:(i+1)*4], byteorder='little', signed=True))
-        self.user_output_ubo.hit_level = int.from_bytes(out_data[0:4], byteorder='little', signed=True)
-        self.user_output_ubo.hit_pos = np.frombuffer(out_data[4:], dtype=np.float32)
+        #out_data = self.user_output_ubo_buffer.read()
+        #int_list = []
+        #for i in range(len(out_data)//4):
+        #    int_list.append(int.from_bytes(out_data[i*4:(i+1)*4], byteorder='little', signed=True))
+        #self.user_output_ubo.hit_level = int.from_bytes(out_data[0:4], byteorder='little', signed=True)
+        #self.user_output_ubo.hit_pos = np.frombuffer(out_data[4:], dtype=np.float32)
 
     def update(self, time, frame_time):
         # self.ctx.clear(1.0, 1.0, 1.0)
@@ -458,7 +548,7 @@ class MglApp(object):
 import time
 
 class MglWindow(object):
-    def __init__(self, timer=None, args=["--vs=1"], backend="pygame2"):
+    def __init__(self, timer=None, vsync=None, args=["--vs=1"], backend="pyglet"):
         if backend is not None:
             available = mgw.find_window_classes()
             assert backend in available, f"backend {backend} is not installed. Installed backends: {available}"
@@ -480,6 +570,9 @@ class MglWindow(object):
         if show_cursor is None:
             show_cursor = config_cls.cursor
 
+        if vsync is None:
+            vsync = values.vsync if values.vsync is not None else config_cls.vsync
+
         self.window = window_cls(
             title=config_cls.title,
             size=size,
@@ -489,7 +582,7 @@ class MglWindow(object):
             else config_cls.resizable,
             gl_version=config_cls.gl_version,
             aspect_ratio=None,  # we're resizing
-            vsync=values.vsync if values.vsync is not None else config_cls.vsync,
+            vsync=vsync,
             samples=values.samples if values.samples is not None else config_cls.samples,
             cursor=show_cursor if show_cursor is not None else True,
             backend=None,
@@ -515,10 +608,12 @@ class MglWindow(object):
         self.config.set_rect_buff(self.app.input_texture_infos_ubo)
         self.window.render_func = self.app.update
 
-        self.timer.start()
+        if self.timer is not None:
+            self.timer.start()
 
         self.counter = 0
         self.window_names = {}
+        self.csr_window_names = {}
 
     def imshow(self, window_name, frame):
         if frame.dtype in [np.float32, np.float64]:
@@ -526,14 +621,24 @@ class MglWindow(object):
         elif frame.dtype not in [np.uint8, np.int8]:
             frame = frame.astype(np.uint8)
 
-        if window_name in self.window_names.keys():
-            i = self.window_names[window_name]
-            self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=9)
+        if (scipy_available and isinstance(frame , scipy.sparse.csr_matrix)) or (pytorch_available and isinstance(frame, torch.Tensor) and frame.layout==torch.sparse_csr):
+            if window_name in self.csr_window_names.keys():
+                i = self.csr_window_names[window_name]
+                self.app.input_texture_infos_ubo.set_input_csr_stream(i, frame, name=window_name, flags=9)
+            else:
+                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=9)
         else:
-            self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=9)
+            if window_name in self.window_names.keys():
+                i = self.window_names[window_name]
+                self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=9)
+            else:
+                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=9)
 
     def update(self):
-        current_time, delta = self.timer.next_frame()
+        if self.timer is not None:
+            current_time, delta = self.timer.next_frame()
+        else:
+            current_time, delta = 0.0, 0.0
 
         if self.config.clear_color is not None:
             self.window.clear(*self.config.clear_color)

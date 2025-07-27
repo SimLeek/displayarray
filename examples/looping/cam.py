@@ -2,7 +2,7 @@ from displayarray import display, DirectDisplay
 import numpy as np
 
 
-with display(0, size=(9999,9999)) as displayer:
+with display('/dev/video0', size=(9999,9999)) as displayer:
     while displayer:
         pass
 import cv2

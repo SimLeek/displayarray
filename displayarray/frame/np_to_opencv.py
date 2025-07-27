@@ -9,7 +9,6 @@ class NpCam(object):
 
     def __init__(self, img):
         """Create a fake camera for OpenCV based on the initial array."""
-        assert isinstance(img, np.ndarray)
         self.__img = img
         self.__is_opened = True
         if len(img.shape) > 0:

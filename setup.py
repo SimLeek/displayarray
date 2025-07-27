@@ -40,6 +40,9 @@ setup(
     package_dir={"": "."},
     package_data={},
     install_requires=[
+        "moderngl",
+        "moderngl-window",
+        "rectpack",
         "docopt==0.6.2",
         "localpubsub==0.0.4",
         "numpy>=1.14.5",
