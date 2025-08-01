@@ -9,4 +9,5 @@ __version__ = "2.0.0"
 from .window.subscriber_windows import display, breakpoint_display, read_updates, publish_updates
 from . import effects
 from .window.mglwindow import MglWindow as DirectDisplay
+from .window.vkwindow import VulkanWindow as DirectDisplayVk
 from .frame.frame_publishing import PubCamCV as DirectRead
