@@ -1,7 +1,7 @@
 """Crop any n-dimensional array."""
 
 import numpy as np
-from ..input import mouse_loop
+from ..input_cv import mouse_loop
 
 
 class Crop(object):

@@ -14,7 +14,7 @@ from displayarray.frame import subscriber_dictionary
 from displayarray.frame.frame_updater import FrameCallable
 from displayarray.frame.frame_updater import FrameUpdater
 from displayarray.frame.subscriber_dictionary import CV_CAMS_DICT
-from displayarray.input import MouseEvent
+from displayarray.input_cv import MouseEvent
 from displayarray.window import window_commands
 from displayarray._util import WeakMethod
 from displayarray.effects.select_channels import SelectChannels
@@ -49,6 +49,7 @@ class SubscriberWindows(object):
         video_sources: Iterable[Union[str, int]] = (0,),
         callbacks: Optional[List[Callable[[np.ndarray], Any]]] = None,
         silent: bool = False,
+        mgl_config=None
     ):
         """Create the array displaying window."""
         self.source_names: List[Union[str, int]] = []
@@ -57,7 +58,7 @@ class SubscriberWindows(object):
         self.input_vid_global_names: List[str] = []
         self.window_names: List[str] = []
         self.input_cams: List[str] = []
-        self.exited = False
+        self._exited = False
         self.silent = silent
         self.ctx = None
         self.sock_list: List[zmq.Socket] = []
@@ -70,18 +71,22 @@ class SubscriberWindows(object):
             self.add_source(name)
         self.callbacks = callbacks
         if not self.silent:
-            self.displayer = mglwindow.MglWindow()
+            self.displayer = mglwindow.MglWindow(config_class=mgl_config)
             for name in window_names:
                 self.add_window(name)
 
         self.update()
 
+    def exited(self):
+        has_exited = self._exited or (self.displayer is None or self.displayer.window.is_closing)
+        return has_exited
+
     def __bool__(self):
         self.update()
-        return not self.exited and (self.displayer is None or not self.displayer.window.is_closing)
+        return not self._exited and (self.displayer is None or not self.displayer.window.is_closing)
 
     def __iter__(self):
-        while not self.exited and (self.displayer is None or not self.displayer.window.is_closing):
+        while not self._exited and (self.displayer is None or not self.displayer.window.is_closing):
             self.update()
             yield self.frames
 
@@ -122,7 +127,7 @@ class SubscriberWindows(object):
         if key_input in self.ESC_KEY_CODES:
             for name in self.window_names:
                 cv2.destroyWindow(name)
-            self.exited = True
+            self._exited = True
             window_commands.quit()
             self.__stop_all_cams()
             return "quit"
@@ -447,8 +452,9 @@ def display(
     size=(-1, -1),
     silent=False,
     force_backend="",
-    mjpg=True
-):
+    mjpg=True,
+    mgl_config=None
+) -> SubscriberWindows:
     """
     Display all the arrays, cameras, and videos passed in.
 
@@ -470,13 +476,13 @@ def display(
         window_names = [f"{uid_for_source(i)}" for i in vids]
     if blocking:
         SubscriberWindows(
-            window_names=window_names, video_sources=vids, silent=silent
+            window_names=window_names, video_sources=vids, silent=silent, mgl_config=mgl_config
         ).loop()
         for vt in vid_threads:
             vt.join()
     else:
         s = SubscriberWindows(
-            window_names=window_names, video_sources=vids, silent=silent
+            window_names=window_names, video_sources=vids, silent=silent, mgl_config=mgl_config
         )
         s.close_threads = vid_threads
         return s

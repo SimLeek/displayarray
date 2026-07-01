@@ -1,7 +1,7 @@
 """Create lens effects. Currently only 2D+color arrays are supported."""
 
 import numpy as np
-from ..input import mouse_loop
+from ..input_cv import mouse_loop
 import cv2
 
 try:

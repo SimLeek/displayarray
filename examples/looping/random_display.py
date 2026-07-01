@@ -26,10 +26,5 @@ with display(arr) as displayer:
         arr6 %= 1.0
 
 
-        displayer.update(arr2, '2')
-        displayer.update(arr3, '3')
-
-        displayer.update(arr4, '4')
-        displayer.update(arr5, '5')
-        displayer.update(arr6, '6')
-
+        displayer.update([arr2, arr3, arr4, arr5, arr6], ['2', '3', '4', '5', '6'])
+        # or, for one frame: displayer.update(arr2, '2')

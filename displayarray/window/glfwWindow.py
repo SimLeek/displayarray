@@ -1,13 +1,12 @@
 import numpy as np
-import moderngl_window as mgw
-import moderngl as mgl
 import cv2
 import struct
-
-from displayarray.input_mgl import MglWindowConfig
-from moderngl_window import geometry
 import os
+import rectpack
 from displayarray.font.get_texture_atlas import get_or_create_font_npz
+import glfw
+import moderngl
+import time
 from typing import Union
 
 SparseType = None
@@ -26,21 +25,6 @@ except ImportError:
     scipy_available = False
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-
-def create_no_input_texture(width=100, height=100):
-    # Create a black image
-    img = np.zeros((height, width, 3), np.uint8)
-
-    # Write "no input" text in the middle
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    text = "No Input"
-    text_size = cv2.getTextSize(text, font, 1, 2)[0]
-    text_x = (width - text_size[0]) // 2
-    text_y = (height + text_size[1]) // 2
-    cv2.putText(img, text, (text_x, text_y), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
-
-    return img
 
 def pad_8_to_32(arr):
     pad_len = -arr.size * np.dtype(arr.dtype).itemsize % np.dtype(np.float32).itemsize
@@ -284,16 +268,13 @@ class InputTextureInfosUBO(object):
         else:
             self.input_image = np.concatenate((self.input_image, data.flatten()), axis=0, dtype=self.input_image.dtype)
 
-
 class UserInputUBO:
     def __init__(self):
-        self.sel_lvl = np.zeros((1),np.int32)
+        self.sel_lvl = np.zeros((1), np.int32)
         self.iMouse = np.zeros((2,), np.float32)
 
     def to_bytes(self):
-        return struct.pack(f"<ixxxxff",
-                           *self.sel_lvl,
-                           *self.iMouse)
+        return struct.pack(f"<ixxxxff", *self.sel_lvl, *self.iMouse)
 
     @property
     def nbytes(self):
@@ -305,239 +286,228 @@ class UserOutputUBO:
         self.hit_pos = (-1.0, -1.0)
 
     def to_bytes(self):
-        return struct.pack(f"<ixxxxff",
-                           self.hit_level, *self.hit_pos)
-
-    def from_bytes(self, data: bytes):
-        if not data or len(data) < self.nbytes:
-            raise RuntimeError("Incorredt Output UBO Bytes")
-
-        unpacked = struct.unpack("<ixxxxff", data[:16])
-
-        self.hit_level = unpacked[0]
-        self.hit_pos = (unpacked[1], unpacked[2])
+        return struct.pack(f"<ixxxxff", self.hit_level, *self.hit_pos)
 
     @property
     def nbytes(self):
         return len(self.to_bytes())
 
-
-class MglApp(object):
-    def __init__(self, ctx: mgl.Context):
-        self.user_input_ubo_buffer = None
-        self.user_output_ubo_buffer = None
-        self.input_texture_ubo_buffer = None
-        self.input_texture_infos_ubo_buffer = None
+class MglApp:
+    def __init__(self, ctx: moderngl.Context):
         self.ctx = ctx
-        self.input_texture_infos_ubo = InputTextureInfosUBO()
         self.user_input_ubo = UserInputUBO()
         self.user_output_ubo = UserOutputUBO()
-        self.capturing_mouse = True
-
-
-        self.quad_fs = geometry.quad_fs()
-
-        # Initialize uniform buffers and shaders
+        self.input_texture_infos_ubo = InputTextureInfosUBO()
+        self.buffers = {}
         self.create_shaders()
 
     def create_shaders(self):
-        # Compile shaders
         self.vertex_shader = """
             #version 430
             in vec2 in_position;
             in vec4 in_texcoord_0;
-
+            
             void main() {
                 gl_Position = vec4(in_position, 0.0, 1.0);
             }
         """
-        self.fragment_shader = None
-        with open(dir_path + os.sep + "pyr_quads.frag") as f:
+        with open(os.path.join(dir_path, "pyr_quads.frag")) as f:
             self.fragment_shader = f.read()
-
         self.shader = self.ctx.program(vertex_shader=self.vertex_shader, fragment_shader=self.fragment_shader)
 
-        self.input_texture_ubo_buffer = self.ctx.buffer(reserve=4*1920*1080*4*3, dynamic=True)
-        self.input_texture_infos_ubo_buffer = self.ctx.buffer(reserve=4*30*9*4+4*2, dynamic=True)
-        self.user_input_ubo_buffer = self.ctx.buffer(self.user_input_ubo.to_bytes(), dynamic=False)
-        self.user_output_ubo_buffer = self.ctx.buffer(self.user_output_ubo.to_bytes(), dynamic=False)
-
-        self.input_texture_ubo_buffer.bind_to_storage_buffer(0)
-        self.input_texture_infos_ubo_buffer.bind_to_storage_buffer(1)
-        self.user_input_ubo_buffer.bind_to_storage_buffer(2)
-        self.user_output_ubo_buffer.bind_to_storage_buffer(3)
+        buffer_sizes = {
+            'input_texture': 4 * 1920 * 1080 * 4 * 3,
+            'input_texture_infos': 4 * 30 * 9 * 4 + 4 * 2,
+            'user_input': len(UserInputUBO().to_bytes()),
+            'user_output': len(UserOutputUBO().to_bytes()),
+            'font_image': np.load(get_or_create_font_npz(), allow_pickle=True)['atlas_texture'].size * 2 + 8,
+            'glyph_buffer': 33 * len(np.load(get_or_create_font_npz(), allow_pickle=True)['metadata'].item()),
+            'input_name': 16384,
+            'input_name_ptr': 1024
+        }
+        for i, (name, size) in enumerate(buffer_sizes.items()):
+            buffer = self.ctx.buffer(reserve=size, dynamic=True)
+            buffer.bind_to_storage_buffer(i)
+            self.buffers[name] = {
+                'buffer': buffer,
+                'size': size,
+            }
+        self.update_buffers()
 
         npz_data = np.load(get_or_create_font_npz(), allow_pickle=True)
+        self.buffers['font_image']['buffer'].write(self.load_atlas_image_data(npz_data))
+        self.buffers['glyph_buffer']['buffer'].write(self.load_atlas_glyph_data(npz_data))
 
-        self.glyph_image_ubo = self.ctx.buffer(reserve=npz_data['atlas_texture'].size*2+5, dynamic=False)
-        self.glyph_image_ubo.bind_to_storage_buffer(4)
-        self.glyph_image_ubo.write(self.load_atlas_image_data(npz_data))
+        self.quad_fs = self.ctx.buffer(np.array([
+            -1.0, -1.0,
+             1.0, -1.0,
+             1.0,  1.0,
+            -1.0, -1.0,
+             1.0,  1.0,
+            -1.0,  1.0
+        ], dtype=np.float32))
+        self.vao = self.ctx.vertex_array(self.shader, [(self.quad_fs, '2f', 'in_position')])
 
-        self.glyph_buffer_ubo = self.ctx.buffer(reserve=33*len(npz_data['metadata'].item()), dynamic=False)
-        self.glyph_buffer_ubo.bind_to_storage_buffer(5)
-        self.glyph_buffer_ubo.write(self.load_atlas_glyph_data(npz_data))
-
-        self.input_name_buffer = self.ctx.buffer(reserve=16384, dynamic=True)
-        self.input_name_ptr_buffer = self.ctx.buffer(reserve=1024, dynamic=True)
-        self.input_name_buffer.bind_to_storage_buffer(6)
-        self.input_name_ptr_buffer.bind_to_storage_buffer(7)
-
-        self.update_buffers()
+    def write_buffer(self, data, offset, buffer_name):
+        buffer = self.buffers[buffer_name]['buffer']
+        data_bytes = data.tobytes() if isinstance(data, np.ndarray) else data
+        buffer[offset:offset + len(data_bytes)] = data_bytes
+        self.ctx.memory_barrier(barriers=moderngl.SHADER_STORAGE_BARRIER_BIT)
 
     def load_atlas_glyph_data(self, npz_data):
         atlas_data = npz_data['metadata'].item()
-
         atlas_data_bytes = bytearray()
-        # glsl is alligned to vec4 or 128 bits or 32 bytes (32 xs)
-        #atlas_data_bytes.extend(struct.pack("<1i" + "x" * 4 * 3, len(atlas_data)))
-        #for c, bbox in atlas_data.items():
-        #    atlas_data_bytes.extend(struct.pack("<5i"+"x"*4*3, ord(c), *bbox))
         atlas_data_bytes.extend(struct.pack("<1i", len(atlas_data)))
         for c, bbox in atlas_data.items():
-            atlas_data_bytes.extend(struct.pack("<5i", ord(c), *[bbox[1], bbox[0], bbox[3], bbox[2]]))
+            atlas_data_bytes.extend(struct.pack("<5i", ord(c), bbox[1], bbox[0], bbox[3], bbox[2]))
         return bytes(atlas_data_bytes)
 
     def load_atlas_image_data(self, npz_data):
         atlas_data = npz_data['atlas_texture']
-
         atlas_data_bytes = bytearray()
-        # glsl is alligned to vec4 or 128 bits or 32 bytes (32 xs)
-        #atlas_data_bytes.extend(struct.pack("<2i" + "x" * 4 * 2, *atlas_data.shape))
         atlas_data_bytes.extend(struct.pack("<2i", *atlas_data.shape))
         atlas_data_bytes.extend(atlas_data.tobytes())
         return bytes(atlas_data_bytes)
 
     def update_buffers(self):
-        # Update uniform buffers
-        #buff = self.input_texture_infos_ubo.get_input_image_buffer()
-        #if len(buff)>10000:
-        #    pad = bytes(bytearray([0])*int(-len(buff)%1024))
-        #    self.input_texture_ubo_buffer.write_chunks(bytes(self.input_texture_infos_ubo.get_input_image_buffer()+pad), 0, 1024, int(np.ceil(len(buff)/1024)))
-        self.input_texture_infos_ubo.get_input_image_buffer(self.input_texture_ubo_buffer.write)
-        self.input_texture_infos_ubo_buffer.write(self.input_texture_infos_ubo.get_tex_data_buffer())
-        names, name_ptrs = self.input_texture_infos_ubo.get_name_str_buffers()
-        self.input_name_buffer.write(names)
-        self.input_name_ptr_buffer.write(name_ptrs)
-        self.user_input_ubo_buffer.write(self.user_input_ubo.to_bytes())
-        out_data = self.user_output_ubo_buffer.read()
-        self.user_output_ubo.from_bytes(out_data)
-
-    def update(self, time, frame_time):
-        # self.ctx.clear(1.0, 1.0, 1.0)
-        # Render the quad using shaders
-        self.update_buffers()
-        self.quad_fs.render(self.shader)
-
-import time
-
-class MglWindow(object):
-    def __init__(self, timer=None, vsync=None, args=["--vs=1"], backend="pyglet", config_class=MglWindowConfig):
-        if backend is not None:
-            available = mgw.find_window_classes()
-            assert backend in available, f"backend {backend} is not installed. Installed backends: {available}"
-        if config_class is None:
-            config_class = MglWindowConfig
-        config_cls = config_class
-        mgw.setup_basic_logging(config_cls.log_level)
-        parser = mgw.create_parser()
-        config_cls.add_arguments(parser)
-        values = mgw.parse_args(args=args, parser=parser)
-        config_cls.argv = values
-        window_cls = mgw.get_local_window_cls(backend)
-
-        # Calculate window size
-        size = values.size or config_cls.window_size
-        size = int(size[0] * values.size_mult), int(size[1] * values.size_mult)
-
-        # Resolve cursor
-        show_cursor = values.cursor
-        if show_cursor is None:
-            show_cursor = config_cls.cursor
-
-        if vsync is None:
-            vsync = values.vsync if values.vsync is not None else config_cls.vsync
-
-        self.window = window_cls(
-            title=config_cls.title,
-            size=size,
-            fullscreen=config_cls.fullscreen or values.fullscreen,
-            resizable=values.resizable
-            if values.resizable is not None
-            else config_cls.resizable,
-            gl_version=config_cls.gl_version,
-            aspect_ratio=None,  # we're resizing
-            vsync=vsync,
-            samples=values.samples if values.samples is not None else config_cls.samples,
-            cursor=show_cursor if show_cursor is not None else True,
-            backend=None,
+        self.input_texture_infos_ubo.get_input_image_buffer(
+            lambda data, offset: self.buffers['input_texture']['buffer'].write(data, offset=offset)
         )
-        self.window.print_context_info()
-        mgw.activate_context(window=self.window)
-        self.timer = timer or mgw.Timer()
-        self.config = config_cls(ctx=self.window.ctx, wnd=self.window, timer=self.timer)
-        # Avoid the event assigning in the property setter for now
-        # We want the even assigning to happen in WindowConfig.__init__
-        # so users are free to assign them in their own __init__.
-        self.window._config = mgw.weakref.ref(self.config)
+        self.buffers['input_texture_infos']['buffer'].write(self.input_texture_infos_ubo.get_tex_data_buffer())
+        names, name_ptrs = self.input_texture_infos_ubo.get_name_str_buffers()
+        self.buffers['input_name']['buffer'].write(names)
+        self.buffers['input_name_ptr']['buffer'].write(name_ptrs)
+        self.buffers['user_input']['buffer'].write(self.user_input_ubo.to_bytes())
 
-        # Swap buffers once before staring the main loop.
-        # This can trigged additional resize events reporting
-        # a more accurate buffer size
-        self.window.swap_buffers()
-        self.window.set_default_viewport()
+    def update(self, width, height):
+        self.ctx.clear(1.0, 1.0, 1.0, 1.0)
+        self.ctx.viewport = (0, 0, width, height)
+        self.update_buffers()
+        self.vao.render()
 
-        self.app = MglApp(self.window.ctx)
-        self.config.set_in_buff(self.app.user_input_ubo)
-        self.config.set_hit_buff(self.app.user_output_ubo)
-        self.config.set_rect_buff(self.app.input_texture_infos_ubo)
-        self.config.set_text_buff(self.app.input_name_buffer, self.app.input_name_ptr_buffer)
-
-        self.window.render_func = self.app.update
-
-        if self.timer is not None:
-            self.timer.start()
-
-        self.counter = 0
+class GlfwWindow:
+    def __init__(self, title="GLFW Window", width=800, height=600, vsync=True):
+        if not glfw.init():
+            raise RuntimeError("Failed to initialize GLFW")
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 4)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.RESIZABLE, glfw.TRUE)
+        self.window = glfw.create_window(width, height, title, None, None)
+        if not self.window:
+            glfw.terminate()
+            raise RuntimeError("Failed to create GLFW window")
+        glfw.make_context_current(self.window)
+        self.ctx = moderngl.create_context(require=430)
+        self.app = MglApp(self.ctx)
         self.window_names = {}
         self.csr_window_names = {}
+        self.last_frame = -1
+        self.capturing_mouse = True
+        glfw.set_cursor_pos_callback(self.window, self.mouse_position_callback)
+        glfw.set_mouse_button_callback(self.window, self.mouse_button_callback)
+        glfw.set_scroll_callback(self.window, self.scroll_callback)
+        glfw.set_key_callback(self.window, self.key_callback)
+        glfw.set_window_size_callback(self.window, self.window_size_callback)
+        self.timer = time.time()
+        if vsync:
+            glfw.swap_interval(1)
+
+    def mouse_position_callback(self, window, x, y):
+        self.app.user_input_ubo.iMouse[0] = float(x)
+        self.app.user_input_ubo.iMouse[1] = float(y)
+        frame = self.app.user_output_ubo.hit_level
+        if frame != -1:
+            self.last_frame = frame
+            self.app.user_input_ubo.sel_lvl[0] = frame
+
+    def mouse_button_callback(self, window, button, action, mods):
+        if action == glfw.PRESS:
+            x, y = glfw.get_cursor_pos(window)
+            self.app.user_input_ubo.iMouse[0] = float(x)
+            self.app.user_input_ubo.iMouse[1] = float(y)
+            frame = self.app.user_output_ubo.hit_level
+            if frame != -1:
+                self.last_frame = frame
+                self.app.user_input_ubo.sel_lvl[0] = frame
+
+    def scroll_callback(self, window, x_offset, y_offset):
+        if self.last_frame != -1:
+            rect = self.app.input_texture_infos_ubo.tex_levels[self.last_frame]['rect']
+            swap = self.app.input_texture_infos_ubo.tex_levels[self.last_frame]['flags'] & 8
+            width = self.app.input_texture_infos_ubo.tex_levels[self.last_frame]['width']
+            height = self.app.input_texture_infos_ubo.tex_levels[self.last_frame]['height']
+            scale_factor = 0.1 * y_offset
+            width_adjustment = width * scale_factor
+            height_adjustment = height * scale_factor
+            if not swap:
+                rect[0] -= width_adjustment / 2
+                rect[1] -= height_adjustment / 2
+                rect[2] += width_adjustment / 2
+                rect[3] += height_adjustment / 2
+            else:
+                rect[0] -= width_adjustment / 2
+                rect[1] -= height_adjustment / 2
+                rect[2] += width_adjustment / 2
+                rect[3] += height_adjustment / 2
+
+    def key_callback(self, window, key, scancode, action, mods):
+        if key == glfw.KEY_P and action == glfw.PRESS:
+            rects = []
+            for i in range(len(self.app.input_texture_infos_ubo.tex_levels)):
+                r = self.app.input_texture_infos_ubo.tex_levels[i]['rect']
+                rects.append((r[2] - r[0], r[3] - r[1]))
+            packer = rectpack.newPacker(
+                mode=rectpack.PackingMode.Offline,
+                pack_algo=rectpack.MaxRectsBaf,
+                bin_algo=rectpack.PackingBin.BFF,
+                sort_algo=rectpack.SORT_AREA,
+                rotation=False
+            )
+            width, height = glfw.get_window_size(self.window)
+            bins = [(height, width)]
+            for i, r in enumerate(rects):
+                packer.add_rect(*r, rid=i)
+            for b in bins:
+                packer.add_bin(*b)
+            packer.pack()
+            all_rects = packer.rect_list()
+            for rect in all_rects:
+                b, x, y, w, h, rid = rect
+                self.app.input_texture_infos_ubo.tex_levels[rid]['rect'] = [x, y, x + w, y + h]
+
+    def window_size_callback(self, window, width, height):
+        self.ctx.viewport = (0, 0, width, height)
 
     def imshow(self, window_name, frame):
         if frame.dtype in [np.float32, np.float64]:
-            frame = (frame*255).astype(np.uint8)  # 0 to 1 to 0 to 255
+            frame = (frame * 255).astype(np.uint8)
         elif frame.dtype not in [np.uint8, np.int8]:
             frame = frame.astype(np.uint8)
-
-        if (scipy_available and isinstance(frame , scipy.sparse.csr_matrix)) or (pytorch_available and isinstance(frame, torch.Tensor) and frame.layout==torch.sparse_csr):
-            if window_name in self.csr_window_names.keys():
+        if (scipy_available and isinstance(frame, scipy.sparse.csr_matrix)) or \
+           (pytorch_available and isinstance(frame, torch.Tensor) and frame.layout == torch.sparse_csr):
+            if window_name in self.csr_window_names:
                 i = self.csr_window_names[window_name]
-                self.app.input_texture_infos_ubo.set_input_csr_stream(i, frame, name=window_name, flags=9)
+                self.app.input_texture_infos_ubo.set_csr_input_stream(i, frame, name=window_name, flags=9)
             else:
-                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=9)
+                self.csr_window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=9)
         else:
-            if window_name in self.window_names.keys():
+            if window_name in self.window_names:
                 i = self.window_names[window_name]
                 self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=9)
             else:
                 self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=9)
+        self.app.user_input_ubo.sel_lvl[0] = 0  # Force select first image for testing
 
     def update(self):
-        if self.timer is not None:
-            current_time, delta = self.timer.next_frame()
-        else:
-            current_time, delta = 0.0, 0.0
-
-        if self.config.clear_color is not None:
-            self.window.clear(*self.config.clear_color)
-
-        # Always bind the window framebuffer before calling render
-        self.window.use()
-
-        if not self.window.is_closing:
-            self.window.render(current_time, delta)
-            self.window.swap_buffers()
-            time.sleep(0)
-            return True
-        else:
-            _, duration = self.timer.stop()
-            self.window.destroy()
+        if glfw.window_should_close(self.window):
+            glfw.terminate()
             return False
+        current_time = time.time()
+        delta = current_time - self.timer
+        self.timer = current_time
+        width, height = glfw.get_window_size(self.window)
+        self.app.update(width, height)
+        glfw.swap_buffers(self.window)
+        glfw.poll_events()
+        return True

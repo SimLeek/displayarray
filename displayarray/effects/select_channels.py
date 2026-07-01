@@ -1,7 +1,7 @@
 """Reduce many color images to the three colors that your eyeballs can see."""
 
 import numpy as np
-from ..input import mouse_loop
+from ..input_cv import mouse_loop
 import cv2
 
 from typing import Iterable

@@ -1,6 +1,6 @@
 import displayarray.effects.crop as crop
 import numpy as np
-from displayarray.input import mouse_loop
+from displayarray.input_cv import mouse_loop
 import mock
 
 

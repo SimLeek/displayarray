@@ -95,22 +95,31 @@ def get_shader(filename):
         raise ValueError("Invalid file extension. Filename must end with .glsl, .vert, or .frag")
     return shader
 
-class InputTextureInfosUBO:
+class InputTextureInfosUBO(object):
     def __init__(self, start_textures=[]):
-        self.channels = 3
+        self.channels = 3  # Assuming RGB format
         self.tex_levels = []
+        self.csr_levels = []  # include start pointers and interleaved or not indices
         self.input_image = []
+        self.input_csr_value_indices = []
+        self.input_csr_index_pointers = []
         self.names = []
         self.no_input = not bool(start_textures)
 
-    def append_input_stream(self, img: np.ndarray, name="Unnamed", flags: int=0):
+    def append_input_stream(self, img:np.ndarray, name="Unnamed", flags:int=0):
         i = len(self.tex_levels)
-        start_index = 0 if i == 0 else (self.tex_levels[-1]['startIdx'] +
-                                        self.tex_levels[-1]['width'] * self.tex_levels[-1]['height'] * self.tex_levels[-1]['channels'])
-        width = img.shape[1]
-        height = img.shape[0]
-        channels = 1 if len(img.shape) == 2 else img.shape[2]
-        rect = [0, 0, width, height]
+        if i==0:
+            start_index = 0
+        else:
+            start_index = self.tex_levels[-1]['startIdx']+\
+                          self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
+        width = img.shape[0]
+        height = img.shape[1]
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
+        rect = [0,0,width,height]
         self.tex_levels.append({
             'startIdx': start_index,
             'width': width,
@@ -119,38 +128,69 @@ class InputTextureInfosUBO:
             'channels': channels,
             'rect': rect
         })
+        if isinstance(self.input_image, bytes):
+            self.input_image = bytearray(self.input_image)
         self.input_image.append((img, start_index))
         self.names.append(name)
+
         return i
 
-    def set_input_stream(self, i, img: np.ndarray, name=None, flags: int=0):
+    def set_input_stream(self, i, img:np.ndarray, name = None, flags:int=0):
+        # todo: deal with setting index that doesn't exist
         start_index = self.tex_levels[i]['startIdx']
-        channels = 1 if len(img.shape) == 2 else img.shape[2]
-        if i != len(self.tex_levels) and \
-           self.tex_levels[i]['width'] * self.tex_levels[i]['height'] != img.shape[1] * img.shape[0]:
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
+        if i!=len(self.tex_levels) and \
+            self.tex_levels[i]['width']*self.tex_levels[i]['height']!=img.shape[0]*img.shape[1]:
             ind = start_index
             for j in range(i, len(self.tex_levels)):
-                new_start_index = ind + img.shape[1] * img.shape[0] * channels
+                new_start_index = ind + img.shape[0]*img.shape[1]*channels
                 self.tex_levels[j]['startIdx'] = new_start_index
                 ind = new_start_index
-        self.tex_levels[i]['width'] = img.shape[1]
-        self.tex_levels[i]['height'] = img.shape[0]
+
+        self.tex_levels[i]['width'] = img.shape[0]
+        self.tex_levels[i]['height'] = img.shape[1]
         self.tex_levels[i]['flags'] = flags
         self.tex_levels[i]['channels'] = channels
+
+        if isinstance(self.input_image, bytearray):
+            self.input_image = bytes(self.input_image)
         if name is not None:
             self.names[i] = name
         else:
             self.names[i] = f"Unnamed {i}"
+
+        # It seems to be stuck at 200MBps, and this might be a python problem.
+        # zero-copy would definitely speed things up, but I'm not sure it's possible with OpenCV
+        # Memcpy should be 10-100 times faster at about 2-20GBps though,
+        # so if you can access & set the raw data from c++, then that would speed things up 100x
+        #
+        # Tried these. Didn't work:
+        #     self.input_image[start_index:end_index] = img.flat
+        #     memoryview(self.input_image)[start_index*4:end_index*4] = memoryview(img.tobytes())  # inpu_image is a bytearray here
+        #     memmove(id(self.input_image)+0x20+start_index*4, id(img.tobytes())+0x20, 4*(end_index-start_index))
+        #     Mem.view(self.input_image)[start_index*4:end_index*4] = img.data
+        # an alternative would be to store a list of pointers to img.data or tobytes() and their sizes & offsets, then use write with offset for setting the buffer
+        #np.copyto(self.input_image[start_index:end_index], img.flat, casting='no')
+        #img = pad_8_to_32(img)
         self.input_image[i] = (img, start_index)
 
-    def append_csr_input_stream(self, img: SparseType, name="Unnamed", flags: int=0):
+    def append_csr_input_stream(self, img:SparseType, name="Unnamed", flags:int=0):
         i = len(self.tex_levels)
-        start_index = 0 if i == 0 else (self.tex_levels[-1]['startIdx'] +
-                                        self.tex_levels[-1]['width'] * self.tex_levels[-1]['height'] * self.tex_levels[-1]['channels'])
-        width = img.shape[1]
-        height = img.shape[0]
-        channels = 1 if len(img.shape) == 2 else img.shape[2]
-        rect = [0, 0, width, height]
+        if i==0:
+            start_index = 0
+        else:
+            start_index = self.tex_levels[-1]['startIdx']+\
+                          self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
+        width = img.shape[0]
+        height = img.shape[1]
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
+        rect = [0,0,width,height]
         self.tex_levels.append({
             'startIdx': start_index,
             'width': width,
@@ -159,61 +199,137 @@ class InputTextureInfosUBO:
             'channels': channels,
             'rect': rect
         })
+        if isinstance(self.input_image, bytes):
+            self.input_image = bytearray(self.input_image)
         self.input_image.append((img, start_index))
         self.names.append(name)
+
         return i
 
-    def set_csr_input_stream(self, i, img: SparseType, name=None, flags: int=0):
+    def set_csr_input_stream(self, i, img:SparseType, name = None, flags:int=0):
+        # todo: deal with setting index that doesn't exist
         start_index = self.tex_levels[i]['startIdx']
-        channels = 1 if len(img.shape) == 2 else img.shape[2]
-        if i != len(self.tex_levels) and \
-           self.tex_levels[i]['width'] * self.tex_levels[i]['height'] != img.shape[1] * img.shape[0]:
+        if len(img.shape)==2:
+            channels = 1
+        else:
+            channels = img.shape[2]
+        if i!=len(self.tex_levels) and \
+            self.tex_levels[i]['width']*self.tex_levels[i]['height']!=img.shape[0]*img.shape[1]:
             ind = start_index
             for j in range(i, len(self.tex_levels)):
-                new_start_index = ind + img.shape[1] * img.shape[0] * channels
+                new_start_index = ind + img.shape[0]*img.shape[1]*channels
                 self.tex_levels[j]['startIdx'] = new_start_index
                 ind = new_start_index
-        self.tex_levels[i]['width'] = img.shape[1]
-        self.tex_levels[i]['height'] = img.shape[0]
+
+        self.tex_levels[i]['width'] = img.shape[0]
+        self.tex_levels[i]['height'] = img.shape[1]
         self.tex_levels[i]['flags'] = flags
         self.tex_levels[i]['channels'] = channels
+
+        if isinstance(self.input_image, bytearray):
+            self.input_image = bytes(self.input_image)
         if name is not None:
             self.names[i] = name
         else:
             self.names[i] = f"Unnamed {i}"
+
+        # It seems to be stuck at 200MBps, and this might be a python problem.
+        # zero-copy would definitely speed things up, but I'm not sure it's possible with OpenCV
+        # Memcpy should be 10-100 times faster at about 2-20GBps though,
+        # so if you can access & set the raw data from c++, then that would speed things up 100x
+        #
+        # Tried these. Didn't work:
+        #     self.input_image[start_index:end_index] = img.flat
+        #     memoryview(self.input_image)[start_index*4:end_index*4] = memoryview(img.tobytes())  # inpu_image is a bytearray here
+        #     memmove(id(self.input_image)+0x20+start_index*4, id(img.tobytes())+0x20, 4*(end_index-start_index))
+        #     Mem.view(self.input_image)[start_index*4:end_index*4] = img.data
+        # an alternative would be to store a list of pointers to img.data or tobytes() and their sizes & offsets, then use write with offset for setting the buffer
+        #np.copyto(self.input_image[start_index:end_index], img.flat, casting='no')
+        #img = pad_8_to_32(img)
         self.input_image[i] = (img, start_index)
 
     def get_name_str_buffers(self, start_index=0, num_strings=None):
+        # note: start index will tell which section these strings start at, so menu items can use other string sections
+        # note2: if num_strings is an int, we'll set the start, otherwise we return part of all sections
         name_bytes = bytearray()
         name_ptr_bytes = bytearray()
-        if start_index == 0:
-            name_ptr_bytes.extend(struct.pack("<1i", len(self.names) if num_strings is None else num_strings))
+
+        if start_index==0:
+            if num_strings is None:
+                name_ptr_bytes.extend(struct.pack("<1i", len(self.names)))
+                #name_ptr_bytes.extend(struct.pack("<1ixxxxxxxxxxxx", len(self.names)))
+            else:
+                name_ptr_bytes.extend(struct.pack("<1i", len(self.names)))
+                #name_ptr_bytes.extend(struct.pack("<1ixxxxxxxxxxxx", num_strings))
         name_ptrs = [start_index]
         for name in self.names:
-            name_ptrs.append(name_ptrs[-1] + len(name))
-        if len(name_ptrs) % 4 != 0:
-            name_ptrs.extend([name_ptrs[-1]] * int(-len(name_ptrs) % 4))
+            name_ptrs.append(name_ptrs[-1]+len(name))
+        if len(name_ptrs)%4!=0:
+            name_ptrs.extend([name_ptrs[-1]]*int(-len(name_ptrs)%4))
         name_ptr_bytes.extend(struct.pack(f"<{len(name_ptrs)}i", *name_ptrs))
         for name in self.names:
             name_bytes.extend(struct.pack(f"<{len(name)}i", *[ord(n) for n in name]))
         return name_bytes, name_ptr_bytes
 
+
     def get_tex_data_buffer(self):
         tex_data_bytes = bytearray()
-        tex_data_bytes.extend(struct.pack("<1i", len(self.tex_levels)))
+        # glsl is alligned to vec4 or 128 bits or 32 bytes (32 xs)
+        tex_data_bytes.extend(struct.pack("<1ixxxxxxxxxxxx", len(self.tex_levels)))
         for level in self.tex_levels:
-            tex_data_bytes.extend(struct.pack("<5i", level['startIdx'], level['width'], level['height'], level['flags'], level['channels']))
+            tex_data_bytes.extend(struct.pack("<5i"+"x"*4*3, level['startIdx'], level['width'], level['height'], level['flags'], level['channels'])) # todo: add 4th int holding flags (rgb order, w/h order)
             tex_data_bytes.extend(struct.pack("<4f", *level['rect']))
         return bytes(tex_data_bytes)
 
-    def get_input_image_buffer(self, writer, device, queue, buffer):
+    def set_tex_data_buffer(self, data):  # todo: unusued, remove or update
+        if len(data) - 2 % 7 != 0:
+            raise ValueError("Input data size does not match buffer format")
+        self.channels = data[0]
+        num_levels = data[1]
+        for i in range(num_levels):
+            self.tex_levels[i]['startIdx'] = data[i * 7 + 2]
+            self.tex_levels[i]['width'] = data[i * 7 + 3]
+            self.tex_levels[i]['height'] = data[i * 7 + 4]
+            self.tex_levels[i]['rect'] = data[i * 7 + 5:i * 7 + 9]
+
+    def append_tex_data_buffer(self, data):  # todo: unusued, remove or update
+        if len(data) != 7:
+            raise ValueError("Input data size does not match buffer format")
+        self.tex_levels.append({
+            'startIdx': data[0],
+            'width': data[0],
+            'height': data[0],
+            'rect': data[0]
+        })
+
+    def get_tex_level_rect(self, level_idx):
+        return self.tex_levels[level_idx]['rect']
+
+    def set_tex_level_rect(self, level_idx, rect):
+        if len(rect) != 4:
+            raise ValueError("Rect must contain 4 values (vec4)")
+        self.tex_levels[level_idx]['rect'] = rect
+
+    def get_input_image_buffer(self, writer, buffer, device):
         for t in self.input_image:
             img, start = t
-            if isinstance(img, np.ndarray):
-                data = img.tobytes()
-            else:  # Sparse matrix
-                data = img.toarray().tobytes()
-            writer(data, offset=start * 4, device=device, queue=queue, buffer=buffer)
+            writer(img.ravel().data, start, buffer, device, None)
+        #return bytes(self.input_image)
+
+    def set_input_image_buffer(self, data: np.ndarray):
+        if len(data) != len(self.input_image):
+            raise ValueError("Input data size does not match buffer size")
+        self.no_input = False
+        self.input_image = data.flatten()
+
+    def append_input_image_buffer(self, data: np.ndarray):
+        if len(data) != len(self.input_image):
+            raise ValueError("Input data size does not match buffer size")
+        if self.no_input:
+            self.input_image = data.flatten()
+            self.no_input = False
+        else:
+            self.input_image = np.concatenate((self.input_image, data.flatten()), axis=0, dtype=self.input_image.dtype)
 
 class UserInputUBO:
     def __init__(self):
@@ -593,7 +709,7 @@ class VulkanApp:
         self.descriptor_set_layout = vk.vkCreateDescriptorSetLayout(
             self.device,
             vk.VkDescriptorSetLayoutCreateInfo(
-                bindingCount=7,
+                bindingCount=8,
                 pBindings=[
                     vk.VkDescriptorSetLayoutBinding(binding=0, descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=1, stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT),
                     vk.VkDescriptorSetLayoutBinding(binding=1, descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=1, stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT),
@@ -602,6 +718,7 @@ class VulkanApp:
                     vk.VkDescriptorSetLayoutBinding(binding=4, descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=1, stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT),
                     vk.VkDescriptorSetLayoutBinding(binding=5, descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=1, stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT),
                     vk.VkDescriptorSetLayoutBinding(binding=6, descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=1, stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT),
+                    vk.VkDescriptorSetLayoutBinding(binding=7, descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=1, stageFlags=vk.VK_SHADER_STAGE_FRAGMENT_BIT),
                 ]
             ),
             None
@@ -669,7 +786,7 @@ class VulkanApp:
 
     def create_descriptor_sets(self):
         pool_sizes = [
-            vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=7)
+            vk.VkDescriptorPoolSize(type=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptorCount=8)
         ]
         descriptor_pool_create_info = vk.VkDescriptorPoolCreateInfo(
             maxSets=1,
@@ -692,6 +809,7 @@ class VulkanApp:
             vk.VkDescriptorBufferInfo(buffer=self.buffers['font_image']['buffer'], offset=0, range=WHOLE_SIZE),
             vk.VkDescriptorBufferInfo(buffer=self.buffers['glyph_buffer']['buffer'], offset=0, range=WHOLE_SIZE),
             vk.VkDescriptorBufferInfo(buffer=self.buffers['input_name']['buffer'], offset=0, range=WHOLE_SIZE),
+            vk.VkDescriptorBufferInfo(buffer=self.buffers['input_name_ptr']['buffer'], offset=0, range=WHOLE_SIZE)
         ]
         write_descriptor_sets = [
             vk.VkWriteDescriptorSet(
@@ -700,7 +818,7 @@ class VulkanApp:
                 descriptorCount=1,
                 descriptorType=vk.VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                 pBufferInfo=[descriptor_writes[i]]
-            ) for i in range(7)
+            ) for i in range(len(descriptor_writes))
         ]
         vk.vkUpdateDescriptorSets(self.device, len(write_descriptor_sets), write_descriptor_sets, 0, None)
         return descriptor_pool, descriptor_sets
@@ -755,8 +873,7 @@ class VulkanApp:
     def update_buffers(self):
         # Update input texture buffer
         self.input_texture_infos_ubo.get_input_image_buffer(
-            self.write_buffer,
-            self.device, self.queue, self.buffers['input_texture']['buffer']
+            self.write_buffer, self.buffers['input_texture']['buffer'], self.device
         )
         # Update texture infos buffer
         tex_data = self.input_texture_infos_ubo.get_tex_data_buffer()
@@ -810,6 +927,59 @@ class VulkanApp:
                 command_buffer = self.command_buffers[image_index]
                 begin_info = vk.VkCommandBufferBeginInfo()
                 vk.vkBeginCommandBuffer(command_buffer, begin_info)
+                # Transition swapchain image to COLOR_ATTACHMENT_OPTIMAL
+                image_barrier = vk.VkImageMemoryBarrier(
+                    srcAccessMask=0,
+                    dstAccessMask=vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    oldLayout=vk.VK_IMAGE_LAYOUT_UNDEFINED,
+                    newLayout=vk.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    srcQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
+                    dstQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
+                    image=self.swapchain_images[image_index],
+                    subresourceRange=vk.VkImageSubresourceRange(
+                        aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
+                        baseMipLevel=0, levelCount=1,
+                        baseArrayLayer=0, layerCount=1
+                    )
+                )
+                vk.vkCmdPipelineBarrier(
+                    command_buffer,
+                    srcStageMask=vk.VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    dstStageMask=vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    dependencyFlags=0,
+                    memoryBarrierCount=0,
+                    pMemoryBarriers=None,
+                    bufferMemoryBarrierCount=0,
+                    pBufferMemoryBarriers=None,
+                    imageMemoryBarrierCount=1,
+                    pImageMemoryBarriers=[image_barrier]
+                )
+                # Barrier for all SSBOs
+                WHOLE_SIZE = 0xFFFFFFFFFFFFFFFF
+                buffer_barriers = [
+                    vk.VkBufferMemoryBarrier(
+                        srcAccessMask=vk.VK_ACCESS_HOST_WRITE_BIT,
+                        dstAccessMask=vk.VK_ACCESS_SHADER_READ_BIT,
+                        srcQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
+                        dstQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
+                        buffer=buf['buffer'],
+                        offset=0,
+                        size=WHOLE_SIZE
+                    ) for buf in self.buffers.values()
+                ]
+                vk.vkCmdPipelineBarrier(
+                    command_buffer,
+                    srcStageMask=vk.VK_PIPELINE_STAGE_HOST_BIT,
+                    dstStageMask=vk.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    dependencyFlags=0,
+                    memoryBarrierCount=0,
+                    pMemoryBarriers=None,
+                    bufferMemoryBarrierCount=len(buffer_barriers),
+                    pBufferMemoryBarriers=buffer_barriers,
+                    imageMemoryBarrierCount=0,
+                    pImageMemoryBarriers=None
+                )
+
                 render_pass_info = vk.VkRenderPassBeginInfo(
                     renderPass=self.render_pass,
                     framebuffer=self.framebuffers[image_index],
@@ -832,6 +1002,32 @@ class VulkanApp:
                 vk.vkCmdSetScissor(command_buffer, 0, 1, [scissor])
                 vk.vkCmdDraw(command_buffer, 6, 1, 0, 0)  # Full-screen quad
                 vk.vkCmdEndRenderPass(command_buffer)
+                image_barrier = vk.VkImageMemoryBarrier(
+                    srcAccessMask=vk.VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                    dstAccessMask=0,
+                    oldLayout=vk.VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                    newLayout=vk.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                    srcQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
+                    dstQueueFamilyIndex=vk.VK_QUEUE_FAMILY_IGNORED,
+                    image=self.swapchain_images[image_index],
+                    subresourceRange=vk.VkImageSubresourceRange(
+                        aspectMask=vk.VK_IMAGE_ASPECT_COLOR_BIT,
+                        baseMipLevel=0, levelCount=1,
+                        baseArrayLayer=0, layerCount=1
+                    )
+                )
+                vk.vkCmdPipelineBarrier(
+                    command_buffer,
+                    srcStageMask=vk.VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                    dstStageMask=vk.VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                    dependencyFlags=0,
+                    memoryBarrierCount=0,
+                    pMemoryBarriers=None,
+                    bufferMemoryBarrierCount=0,
+                    pBufferMemoryBarriers=None,
+                    imageMemoryBarrierCount=1,
+                    pImageMemoryBarriers=[image_barrier]
+                )
                 vk.vkEndCommandBuffer(command_buffer)
                 submit_info = vk.VkSubmitInfo(
                     waitSemaphoreCount=1,

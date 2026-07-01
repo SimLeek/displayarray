@@ -6,4 +6,5 @@ SubscriberWindows displays one array per window, updating it as it's changed.
 
 from .subscriber_windows import SubscriberWindows
 from .mglwindow import MglWindow
-from .vkwindow import VulkanWindow
+from .glfwWindow import GlfwWindow
+#from .vkwindow import VulkanWindow

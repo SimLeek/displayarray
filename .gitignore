@@ -111,3 +111,6 @@ venv.bak/
 *.mp4
 
 *.npz
+
+*.spv
+*.cap

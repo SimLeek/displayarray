@@ -33,7 +33,7 @@ def main(argv=None):
 
         print(f"DisplayArray V{__version__}")
         return
-    from displayarray import DirectRead, DirectDisplay
+    from displayarray import DirectRead, DirectDisplayGl, DirectDisplay
 
     vids = [int(w) for w in arguments["--webcam"]] + arguments["--video"]
     v_disps = None
@@ -44,8 +44,7 @@ def main(argv=None):
             for name, frame in frame_dict.items():
                 im = frame.astype(np.uint8)
                 display.imshow(f'{name}', im)
-            display.update()
-            if display.window.is_closing:
+            if not display.update():
                 break
             continue
 
