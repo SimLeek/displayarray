@@ -36,6 +36,7 @@ setup(
         "displayarray.effects",
         "displayarray.frame",
         "displayarray.window",
+        "displayarray.font"
     ],
     package_dir={"": "."},
     package_data={},
