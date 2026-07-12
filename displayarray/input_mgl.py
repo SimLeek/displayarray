@@ -289,6 +289,10 @@ class PassthruMglWindowConfig(MglWindowConfig):
             super().on_mouse_release_event(x, y, button)
 
     def on_mouse_drag_event(self, x: int, y: int, dx: int, dy: int):
+        if self.input_mode in (1, 2):
+            local = self.get_local_mouse_data(x, y, clamp=(self.input_mode == 1))
+            if local:
+                self._route('mouse_pos', *local)
         if not self._route('mouse_drag', x, y, dx, dy):
             super().on_mouse_drag_event(x, y, dx, dy)
 
