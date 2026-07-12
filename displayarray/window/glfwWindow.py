@@ -50,8 +50,8 @@ class InputTextureInfosUBO(object):
         else:
             start_index = self.tex_levels[-1]['startIdx']+\
                           self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
-        width = img.shape[0]
-        height = img.shape[1]
+        width = img.shape[1]
+        height = img.shape[0]
         if len(img.shape)==2:
             channels = 1
         else:
@@ -121,8 +121,8 @@ class InputTextureInfosUBO(object):
         else:
             start_index = self.tex_levels[-1]['startIdx']+\
                           self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
-        width = img.shape[0]
-        height = img.shape[1]
+        width = img.shape[1]
+        height = img.shape[0]
         if len(img.shape)==2:
             channels = 1
         else:
@@ -488,15 +488,15 @@ class GlfwWindow:
            (pytorch_available and isinstance(frame, torch.Tensor) and frame.layout == torch.sparse_csr):
             if window_name in self.csr_window_names:
                 i = self.csr_window_names[window_name]
-                self.app.input_texture_infos_ubo.set_csr_input_stream(i, frame, name=window_name, flags=9)
+                self.app.input_texture_infos_ubo.set_csr_input_stream(i, frame, name=window_name, flags=1)
             else:
-                self.csr_window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=9)
+                self.csr_window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=1)
         else:
             if window_name in self.window_names:
                 i = self.window_names[window_name]
-                self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=9)
+                self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=1)
             else:
-                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=9)
+                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=1)
         self.app.user_input_ubo.sel_lvl[0] = 0  # Force select first image for testing
 
     def update(self):
