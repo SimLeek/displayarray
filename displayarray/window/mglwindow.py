@@ -66,8 +66,8 @@ class InputTextureInfosUBO(object):
         else:
             start_index = self.tex_levels[-1]['startIdx']+\
                           self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
-        width = img.shape[1]
-        height = img.shape[0]
+        width = img.shape[0]
+        height = img.shape[1]
         if len(img.shape)==2:
             channels = 1
         else:
@@ -137,8 +137,8 @@ class InputTextureInfosUBO(object):
         else:
             start_index = self.tex_levels[-1]['startIdx']+\
                           self.tex_levels[-1]['width']*self.tex_levels[-1]['height']*self.tex_levels[-1]['channels']
-        width = img.shape[1]
-        height = img.shape[0]
+        width = img.shape[0]
+        height = img.shape[1]
         if len(img.shape)==2:
             channels = 1
         else:
@@ -510,15 +510,15 @@ class MglWindow(object):
         if (scipy_available and isinstance(frame , scipy.sparse.csr_matrix)) or (pytorch_available and isinstance(frame, torch.Tensor) and frame.layout==torch.sparse_csr):
             if window_name in self.csr_window_names.keys():
                 i = self.csr_window_names[window_name]
-                self.app.input_texture_infos_ubo.set_input_csr_stream(i, frame, name=window_name, flags=1)
+                self.app.input_texture_infos_ubo.set_input_csr_stream(i, frame, name=window_name, flags=9)
             else:
-                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=1)
+                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_csr_input_stream(frame, name=window_name, flags=9)
         else:
             if window_name in self.window_names.keys():
                 i = self.window_names[window_name]
-                self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=1)
+                self.app.input_texture_infos_ubo.set_input_stream(i, frame, name=window_name, flags=9)
             else:
-                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=1)
+                self.window_names[window_name] = self.app.input_texture_infos_ubo.append_input_stream(frame, name=window_name, flags=9)
 
     def update(self):
         if self.timer is not None:

@@ -60,8 +60,8 @@ class MglWindowConfig(mgw.WindowConfig):
         orig_h = level_data['height']
         swap = self.rbuf.tex_levels[self.last_frame]['flags'] & 8
 
-        screen_w = rect[2] - rect[0]
-        screen_h = rect[3] - rect[1]
+        screen_h = rect[2] - rect[0]
+        screen_w = rect[3] - rect[1]
 
         if screen_w == 0 or screen_h == 0:
             return None
@@ -246,9 +246,14 @@ class PassthruMglWindowConfig(MglWindowConfig):
         if self.last_frame == -1 or self.rbuf is None:
             return None
         rect = self.rbuf.tex_levels[self.last_frame]['rect']
+        swap = self.rbuf.tex_levels[self.last_frame]['flags']&8
         if clamp:
-            x = max(rect[0], min(x, rect[2]))
-            y = max(rect[1], min(y, rect[3]))
+            if swap:
+                x = max(rect[1], min(x, rect[3]))
+                y = max(rect[0], min(y, rect[2]))
+            else:
+                x = max(rect[0], min(x, rect[2]))
+                y = max(rect[1], min(y, rect[3]))
         result = super().get_local_mouse_data(x, y)
         if result is None:
             return None
