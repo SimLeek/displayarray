@@ -60,21 +60,22 @@ class MglWindowConfig(mgw.WindowConfig):
         orig_h = level_data['height']
         swap = self.rbuf.tex_levels[self.last_frame]['flags'] & 8
 
-        screen_h = rect[2] - rect[0]
         screen_w = rect[3] - rect[1]
+        screen_h = rect[2] - rect[0]
 
         if screen_w == 0 or screen_h == 0:
             return None
 
-        rel_x_pct = (x - rect[0]) / screen_w
-        rel_y_pct = (y - rect[1]) / screen_h
-
         if swap:
-            tex_x_pct = rel_y_pct
-            tex_y_pct = rel_x_pct
-            current_target_w = orig_h
-            current_target_h = orig_w
+            rel_x_pct = (y - rect[0]) / screen_h
+            rel_y_pct = (x - rect[1]) / screen_w
+            tex_x_pct = rel_x_pct
+            tex_y_pct = rel_y_pct
+            current_target_w = orig_w
+            current_target_h = orig_h
         else:
+            rel_x_pct = (x - rect[0]) / screen_w
+            rel_y_pct = (y - rect[1]) / screen_h
             tex_x_pct = rel_x_pct
             tex_y_pct = rel_y_pct
             current_target_w = orig_w
